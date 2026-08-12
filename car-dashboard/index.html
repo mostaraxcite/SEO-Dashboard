@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>حملة السيارات — لوحة الأداء</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12151a;
+    --panel:#1b1f26;
+    --panel-alt:#20252d;
+    --border:#2a2f38;
+    --text:#f4f6f8;
+    --muted:#8b93a1;
+    --amber:#f2a93b;
+    --teal:#37d6c4;
+    --red:#e5484d;
+    --chrome:#c7cdd6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(242,169,59,0.08), transparent 60%),
+      radial-gradient(ellipse 800px 500px at 100% 0%, rgba(55,214,196,0.06), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Tajawal', sans-serif;
+    min-height:100vh;
+    padding:28px 18px 60px;
+  }
+  .num{ font-family:'JetBrains Mono', monospace; direction:ltr; unicode-bidi:isolate; }
+  .wrap{ max-width:1180px; margin:0 auto; }
+  header{display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:18px; margin-bottom:26px;}
+  .eyebrow{color:var(--amber); font-weight:700; font-size:12.5px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .eyebrow::before{content:''; width:8px; height:8px; border-radius:50%; background:var(--amber); box-shadow:0 0 10px var(--amber); display:inline-block;}
+  h1{font-size:clamp(24px,4vw,34px); font-weight:900;}
+  .period{color:var(--muted); font-size:14.5px; margin-top:6px;}
+  .period .num{color:var(--chrome);}
+  .badge{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px 16px; text-align:center; min-width:150px;}
+  .badge .lbl{color:var(--muted); font-size:11.5px; letter-spacing:1px;}
+  .badge .val{font-size:20px; font-weight:700; color:var(--teal); margin-top:2px;}
+  .alert{background:linear-gradient(90deg, rgba(229,72,77,0.14), rgba(229,72,77,0.04)); border:1px solid rgba(229,72,77,0.4); border-inline-start:4px solid var(--red); border-radius:10px; padding:14px 18px; margin-bottom:30px; display:flex; gap:12px; align-items:flex-start; font-size:14px; line-height:1.9;}
+  .alert .ico{width:24px; height:24px; border-radius:50%; background:var(--red); color:#12151a; display:flex; align-items:center; justify-content:center; font-weight:900; flex:none;}
+  .alert b{color:#fff;}
+  .cluster-head{display:flex; align-items:baseline; gap:10px; margin-bottom:18px;}
+  .cluster-head h2{font-size:15px; letter-spacing:1.5px; color:var(--chrome); text-transform:uppercase;}
+  .cluster-head span{color:var(--muted); font-size:12.5px;}
+  .gauges{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:34px;}
+  .gauge-card{background:radial-gradient(circle at 50% 0%, #23282f, var(--panel) 70%); border:1px solid var(--border); border-radius:16px; padding:18px 14px 20px; text-align:center; position:relative; overflow:hidden;}
+  .gauge-card::before{content:''; position:absolute; inset:0; border-radius:16px; padding:1px; background:linear-gradient(160deg, rgba(199,205,214,0.18), transparent 40%); -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none;}
+  .gauge-name{font-size:13px; color:var(--muted); font-weight:500; margin-bottom:2px;}
+  .gauge-svg{width:100%; max-width:190px; margin:4px auto -14px; display:block;}
+  .gauge-value{font-size:26px; font-weight:700; margin-top:2px;}
+  .gauge-sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .needle{transform-origin:100px 100px; transform:rotate(-90deg); transition:transform 1.4s cubic-bezier(.2,.9,.25,1);}
+  .needle-pin{fill:var(--chrome);}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:38px;}
+  .kpi{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 16px 14px; position:relative;}
+  .kpi .lbl{color:var(--muted); font-size:12.5px; margin-bottom:8px;}
+  .kpi .val{font-size:22px; font-weight:700;}
+  .kpi .unit{font-size:12px; color:var(--muted); margin-inline-start:4px;}
+  .kpi.spend .val{color:var(--amber);}
+  .kpi.reg .val{color:var(--teal);}
+  section.panel{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:24px 24px 22px; margin-bottom:24px;}
+  .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:8px;}
+  .panel-head h2{font-size:16px; font-weight:700;}
+  .panel-head .note{font-size:12px; color:var(--muted);}
+  .two-col{display:grid; grid-template-columns:1.1fr 1fr; gap:22px;}
+  @media (max-width:880px){.two-col{grid-template-columns:1fr;} .gauges,.kpis{grid-template-columns:repeat(2,1fr);}}
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  thead th{text-align:right; color:var(--muted); font-weight:500; font-size:11.5px; letter-spacing:.5px; text-transform:uppercase; padding:0 8px 10px; border-bottom:1px solid var(--border);}
+  thead th.num-col{text-align:left;}
+  tbody td{padding:11px 8px; border-bottom:1px solid rgba(255,255,255,0.04);}
+  tbody td.num-col{text-align:left;}
+  tbody tr:last-child td{border-bottom:none;}
+  .platform{display:flex; align-items:center; gap:9px; font-weight:500;}
+  .dot{width:9px; height:9px; border-radius:2px; flex:none;}
+  .bar-row{margin-bottom:14px;}
+  .bar-row:last-child{margin-bottom:0;}
+  .bar-top{display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;}
+  .bar-top .name{display:flex; align-items:center; gap:8px; font-weight:500;}
+  .bar-track{height:9px; border-radius:5px; background:var(--panel-alt); overflow:hidden;}
+  .bar-fill{height:100%; border-radius:5px;}
+  .inactive{opacity:.45;}
+  .inactive-tag{font-size:10.5px; color:var(--muted); background:var(--panel-alt); padding:2px 7px; border-radius:5px; margin-inline-start:6px;}
+  .branch-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:22px;}
+  .branch-stat{text-align:center;}
+  .branch-stat .n{font-size:26px; font-weight:700;}
+  .branch-stat .l{font-size:12px; color:var(--muted); margin-top:4px;}
+  .coverage-wrap{margin-top:6px;}
+  .coverage-label{display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;}
+  .coverage-track{height:14px; border-radius:8px; background:var(--panel-alt); overflow:hidden; position:relative;}
+  .coverage-fill{height:100%; background:linear-gradient(90deg,#f2a93b,#37d6c4); border-radius:8px;}
+  footer{text-align:center; color:var(--muted); font-size:12px; margin-top:30px; line-height:2;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">تقرير أداء الحملة</div>
+      <h1>لوحة قيادة حملة السيارات</h1>
+      <div class="period">الفترة: <span class="num">09 أغسطس 2026</span> — <span class="num">07 أكتوبر 2026</span></div>
+    </div>
+    <div class="badge">
+      <div class="lbl">إجمالي الإنفاق</div>
+      <div class="val num">$1,760.44</div>
+    </div>
+  </header>
+  <div class="alert">
+    <div class="ico">!</div>
+    <div><b>ملاحظة على جودة البيانات:</b> عدد المسجَّلين (<span class="num">30,683</span>) أعلى من عدد المسح الفريد (<span class="num">27,709</span>). يُنصح بالتحقق من تعريف "المسح الفريد" قبل اعتماد نسبة التسجيل إلى المسح كمؤشر تحويل دقيق.</div>
+  </div>
+  <div class="cluster-head"><h2>مؤشرات الأداء الرئيسية</h2><span>— قراءات لوحة القيادة</span></div>
+  <div class="gauges" id="gauges"></div>
+  <div class="kpis">
+    <div class="kpi spend"><div class="lbl">الإنفاق الإعلاني المدفوع</div><div class="val num">$1,760.44</div></div>
+    <div class="kpi"><div class="lbl">مرات الظهور (مدفوعة)</div><div class="val num">3,657,440</div></div>
+    <div class="kpi"><div class="lbl">النقرات (مدفوعة)</div><div class="val num">3,861</div></div>
+    <div class="kpi"><div class="lbl">الرسائل المرسلة (مباشر)</div><div class="val num">247,884</div></div>
+    <div class="kpi"><div class="lbl">الرسائل المسلَّمة (مباشر)</div><div class="val num">196,372</div></div>
+    <div class="kpi"><div class="lbl">إجمالي عمليات المسح</div><div class="val num">42,518</div></div>
+    <div class="kpi reg"><div class="lbl">إجمالي المسجَّلين</div><div class="val num">30,683</div></div>
+    <div class="kpi"><div class="lbl">الفروع المستجيبة</div><div class="val num">481 <span class="unit">/ 538</span></div></div>
+  </div>
+  <div class="two-col">
+    <section class="panel">
+      <div class="panel-head"><h2>الإعلانات المدفوعة — حسب المنصة</h2><div class="note">الإنفاق مقابل النقرات</div></div>
+      <table>
+        <thead><tr><th>المنصة</th><th class="num-col">الإنفاق</th><th class="num-col">الظهور</th><th class="num-col">النقرات</th><th class="num-col">CTR</th><th class="num-col">CPC</th></tr></thead>
+        <tbody>
+          <tr><td><div class="platform"><span class="dot" style="background:#E1306C"></span>Instagram</div></td><td class="num-col">$531.28</td><td class="num-col">1,449,950</td><td class="num-col">1,015</td><td class="num-col">0.07%</td><td class="num-col">$0.52</td></tr>
+          <tr><td><div class="platform"><span class="dot" style="background:#1877F2"></span>Facebook</div></td><td class="num-col">$329.74</td><td class="num-col">153,178</td><td class="num-col">1,975</td><td class="num-col">1.29%</td><td class="num-col">$0.17</td></tr>
+          <tr><td><div class="platform"><span class="dot" style="background:#FFFC00"></span>Snapchat</div></td><td class="num-col">$768.58</td><td class="num-col">1,893,056</td><td class="num-col">644</td><td class="num-col">0.03%</td><td class="num-col">$1.19</td></tr>
+          <tr><td><div class="platform"><span class="dot" style="background:#E60023"></span>Pinterest</div></td><td class="num-col">$130.84</td><td class="num-col">161,256</td><td class="num-col">227</td><td class="num-col">0.14%</td><td class="num-col">$0.58</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>القنوات المباشرة</h2><div class="note">التسليم مقابل الإرسال</div></div>
+      <div id="direct-bars"></div>
+    </section>
+  </div>
+  <section class="panel">
+    <div class="panel-head"><h2>نتائج الفروع</h2><div class="note">تغطية الفروع بالاستجابة</div></div>
+    <div class="branch-grid">
+      <div class="branch-stat"><div class="n num">538</div><div class="l">إجمالي الفروع</div></div>
+      <div class="branch-stat"><div class="n num" style="color:var(--teal)">481</div><div class="l">فروع لديها استجابة</div></div>
+      <div class="branch-stat"><div class="n num">42,518</div><div class="l">إجمالي المسح</div></div>
+      <div class="branch-stat"><div class="n num">27,709</div><div class="l">مسح فريد</div></div>
+    </div>
+    <div class="coverage-wrap"><div class="coverage-label"><span>نسبة تغطية الفروع</span><span class="num" style="color:var(--teal)">89.4%</span></div><div class="coverage-track"><div class="coverage-fill" style="width:0%" id="coverage-fill"></div></div></div>
+  </section>
+  <footer>لوحة الأداء مبنية من ملف <span class="num">Car_Campaign_Looker_Ready_Dashboard.xlsx</span> — البيانات كما وردت في الملف الأصلي (Dashboard, Paid_Media, Direct_Channels, Branch_Results).</footer>
+</div>
+<script>
+const gauges=[{name:'معدل تسليم الرسائل المباشرة',value:79.2,color:'#37d6c4'},{name:'نسبة النقر (القنوات المباشرة)',value:6.7,color:'#f2a93b'},{name:'تغطية الفروع',value:89.4,color:'#37d6c4'},{name:'التسجيل مقابل المسح',value:72.2,color:'#e5484d'}];
+const gaugesEl=document.getElementById('gauges');
+gauges.forEach((g,i)=>{const id='g'+i;const card=document.createElement('div');card.className='gauge-card';card.innerHTML=`<div class="gauge-name">${g.name}</div><svg class="gauge-svg" viewBox="0 0 200 118"><path d="M20,100 A80,80 0 0 1 180,100" fill="none" stroke="#2a2f38" stroke-width="14" stroke-linecap="round"/><path id="${id}-arc" d="M20,100 A80,80 0 0 1 180,100" fill="none" stroke="${g.color}" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" style="transition:stroke-dasharray 1.4s cubic-bezier(.2,.9,.25,1)"/><g id="${id}-needle" class="needle"><line x1="100" y1="100" x2="100" y2="34" stroke="#c7cdd6" stroke-width="3" stroke-linecap="round"/></g><circle cx="100" cy="100" r="7" class="needle-pin"/></svg><div class="gauge-value num" style="color:${g.color}">0%</div><div class="gauge-sub">من 100%</div>`;gaugesEl.appendChild(card);});
+const channels=[{name:'SMS',color:'#f2a93b',sent:156086,delivered:149126,rate:95.5,active:true},{name:'App Push',color:'#37d6c4',sent:91798,delivered:47246,rate:51.5,active:true},{name:'WhatsApp',color:'#8b93a1',sent:0,delivered:0,rate:0,active:false},{name:'Email',color:'#8b93a1',sent:0,delivered:0,rate:0,active:false}];
+const dEl=document.getElementById('direct-bars');
+channels.forEach(c=>{const row=document.createElement('div');row.className='bar-row'+(c.active?'':' inactive');row.innerHTML=`<div class="bar-top"><div class="name"><span class="dot" style="background:${c.color}"></span>${c.name}${c.active?'':'<span class="inactive-tag">غير نشطة</span>'}</div><div class="num" style="color:${c.color}">${c.active?c.rate.toFixed(1)+'%':'—'}</div></div><div class="bar-track"><div class="bar-fill" style="width:0%; background:${c.color}" data-target="${c.rate}"></div></div>`;dEl.appendChild(row);});
+window.addEventListener('load',()=>{setTimeout(()=>{gauges.forEach((g,i)=>{document.getElementById('g'+i+'-arc').setAttribute('stroke-dasharray',g.value+' 100');const angle=-90+(g.value/100)*180;document.getElementById('g'+i+'-needle').style.transform=`rotate(${angle}deg)`;document.querySelectorAll('.gauge-card')[i].querySelector('.gauge-value').textContent=g.value.toFixed(1)+'%';});document.querySelectorAll('.bar-fill').forEach(el=>{el.style.transition='width 1.2s cubic-bezier(.2,.9,.25,1)';el.style.width=el.dataset.target+'%';});document.getElementById('coverage-fill').style.transition='width 1.4s cubic-bezier(.2,.9,.25,1)';document.getElementById('coverage-fill').style.width='89.4%';},150);});
+</script>
+</body>
+</html>
