@@ -2,7 +2,6 @@ export default async function handler(req,res){
   const liveSources={
     Meta:process.env.SM_META_URL,
     Google:process.env.SM_GOOGLE_URL,
-    YouTube:process.env.SM_YOUTUBE_URL,
     Snapchat:process.env.SM_SNAPCHAT_URL,
     TikTok:process.env.SM_TIKTOK_URL
   };
@@ -34,13 +33,11 @@ export default async function handler(req,res){
     out.X={ok:false,error:String(e?.message||e),refreshMode:'daily'};
   }
 
-  // Meta, Google Search, YouTube, Snapchat and TikTok: one Supermetrics refresh per 30 minutes at the CDN.
-  // Pinterest and X are separately cached for 24 hours by /api/daily.
   res.setHeader('Cache-Control','public, max-age=0, s-maxage=1800, stale-while-revalidate=300');
   res.setHeader('Vercel-CDN-Cache-Control','max-age=1800');
   res.status(200).json({
     updatedAt:new Date().toISOString(),
     sources:out,
-    refreshPolicy:{every30Minutes:['Meta','Google','YouTube','Snapchat','TikTok'],daily:['Pinterest','X']}
+    refreshPolicy:{every30Minutes:['Meta','Google','Snapchat','TikTok'],daily:['Pinterest','X']}
   });
 }
