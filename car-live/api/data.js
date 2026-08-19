@@ -14,9 +14,9 @@ export default async function handler(req,res){
       const r=await fetch(url,{cache:'no-store'});
       const text=await r.text();
       if(!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,160)}`);
-      out[name]={ok:true,data:JSON.parse(text),refreshMode:'live'};
+      out[name]={ok:true,data:JSON.parse(text),refreshMode:'30min'};
     }catch(e){
-      out[name]={ok:false,error:String(e?.message||e),refreshMode:'live'};
+      out[name]={ok:false,error:String(e?.message||e),refreshMode:'30min'};
     }
   }));
 
@@ -33,10 +33,13 @@ export default async function handler(req,res){
     out.X={ok:false,error:String(e?.message||e),refreshMode:'daily'};
   }
 
-  res.setHeader('Cache-Control','no-store, max-age=0');
+  // Meta, Google, Snapchat and TikTok: one Supermetrics refresh per 30 minutes at the CDN.
+  // Pinterest and X are separately cached for 24 hours by /api/daily.
+  res.setHeader('Cache-Control','public, max-age=0, s-maxage=1800, stale-while-revalidate=300');
+  res.setHeader('Vercel-CDN-Cache-Control','max-age=1800');
   res.status(200).json({
     updatedAt:new Date().toISOString(),
     sources:out,
-    refreshPolicy:{live:['Meta','Google','Snapchat','TikTok'],daily:['Pinterest','X']}
+    refreshPolicy:{every30Minutes:['Meta','Google','Snapchat','TikTok'],daily:['Pinterest','X']}
   });
 }
