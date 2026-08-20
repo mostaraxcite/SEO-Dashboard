@@ -17,9 +17,9 @@ function withDateRange(rawUrl,range){
   return u.toString();
 }
 
-function sourceConfig(allUrl,legacyUrl){
+function sourceConfig(allUrl,standardUrl){
   if(allUrl) return {url:allUrl,scope:'all-campaigns'};
-  if(legacyUrl) return {url:legacyUrl,scope:'legacy-query'};
+  if(standardUrl) return {url:standardUrl,scope:'all-campaigns'};
   return {url:null,scope:'missing'};
 }
 
