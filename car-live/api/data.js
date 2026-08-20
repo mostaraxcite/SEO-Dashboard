@@ -17,6 +17,12 @@ function withDateRange(rawUrl,range){
   return u.toString();
 }
 
+function sourceConfig(allUrl,legacyUrl){
+  if(allUrl) return {url:allUrl,scope:'all-campaigns'};
+  if(legacyUrl) return {url:legacyUrl,scope:'legacy-query'};
+  return {url:null,scope:'missing'};
+}
+
 export default async function handler(req,res){
   const range=getDateRange(req);
   if(range.error){
@@ -25,27 +31,27 @@ export default async function handler(req,res){
   }
 
   const liveSources={
-    Meta:process.env.SM_META_URL,
-    Google:process.env.SM_GOOGLE_URL,
-    Snapchat:process.env.SM_SNAPCHAT_URL,
-    TikTok:process.env.SM_TIKTOK_URL
+    Meta:sourceConfig(process.env.SM_META_ALL_URL,process.env.SM_META_URL),
+    Google:sourceConfig(process.env.SM_GOOGLE_ALL_URL,process.env.SM_GOOGLE_URL),
+    Snapchat:sourceConfig(process.env.SM_SNAPCHAT_ALL_URL,process.env.SM_SNAPCHAT_URL),
+    TikTok:sourceConfig(process.env.SM_TIKTOK_ALL_URL,process.env.SM_TIKTOK_URL)
   };
 
   const out={};
 
-  await Promise.all(Object.entries(liveSources).map(async([name,rawUrl])=>{
-    if(!rawUrl){
-      out[name]={ok:false,error:'Missing environment variable',refreshMode:'30min'};
+  await Promise.all(Object.entries(liveSources).map(async([name,cfg])=>{
+    if(!cfg.url){
+      out[name]={ok:false,error:'Missing Supermetrics URL',refreshMode:'30min',queryScope:cfg.scope};
       return;
     }
     try{
-      const url=withDateRange(rawUrl,range);
+      const url=withDateRange(cfg.url,range);
       const r=await fetch(url,{cache:'no-store'});
       const text=await r.text();
       if(!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,200)}`);
-      out[name]={ok:true,data:JSON.parse(text),refreshMode:'30min'};
+      out[name]={ok:true,data:JSON.parse(text),refreshMode:'30min',queryScope:cfg.scope};
     }catch(e){
-      out[name]={ok:false,error:String(e?.message||e),refreshMode:'30min'};
+      out[name]={ok:false,error:String(e?.message||e),refreshMode:'30min',queryScope:cfg.scope};
     }
   }));
 
@@ -56,16 +62,17 @@ export default async function handler(req,res){
     const dailyUrl=`${proto}://${host}/api/daily${qs}`;
     const r=await fetch(dailyUrl);
     const daily=await r.json();
-    out.Pinterest={...(daily.sources?.Pinterest||{ok:false,error:'Daily cache unavailable'}),refreshMode:'daily'};
-    out.X={...(daily.sources?.X||{ok:false,error:'Daily cache unavailable'}),refreshMode:'daily'};
+    out.Pinterest={...(daily.sources?.Pinterest||{ok:false,error:'Daily source unavailable'}),refreshMode:'daily'};
+    out.X={...(daily.sources?.X||{ok:false,error:'Daily source unavailable'}),refreshMode:'daily'};
   }catch(e){
-    out.Pinterest={ok:false,error:String(e?.message||e),refreshMode:'daily'};
-    out.X={ok:false,error:String(e?.message||e),refreshMode:'daily'};
+    out.Pinterest={ok:false,error:String(e?.message||e),refreshMode:'daily',queryScope:'unknown'};
+    out.X={ok:false,error:String(e?.message||e),refreshMode:'daily',queryScope:'unknown'};
   }
 
   res.setHeader('Cache-Control','public, max-age=0, s-maxage=1800, stale-while-revalidate=300');
   res.setHeader('Vercel-CDN-Cache-Control','max-age=1800');
   res.status(200).json({
+    dashboardScope:'all-campaigns',
     updatedAt:new Date().toISOString(),
     dateRange:{start_date:range.start,end_date:range.end,custom:range.custom},
     sources:out,
