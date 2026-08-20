@@ -80,9 +80,9 @@ function parse(platform,p,tag=selectedTag){
   let rs=t.slice(1);
 
   const ci=ix(h,['Campaign name','Campaign']);
-  const ui=ix(h,['Cost (USD)','Spend (USD)']);
-  const co=ix(h,['Cost','Spend','Amount spent']);
-  const cu=ix(h,['Currency','Advertiser currency','Account currency','Campaign currency']);
+  const ui=ix(h,['Cost (USD)','Spend (USD)','Total spent (USD)','Amount spent (USD)']);
+  const co=ix(h,['Cost','Spend','Amount spent','Total spent']);
+  const cu=ix(h,['Currency','Advertiser currency','Account currency','Campaign currency','Account currency code']);
   const im=ix(h,['Impressions','Impressions paid','Paid impressions']);
   const re=ix(h,['Reach','Unique users','Total reach']);
   const cpmi=ix(h,['CPM','eCPM','CPM (cost per 1000 impressions)']);
