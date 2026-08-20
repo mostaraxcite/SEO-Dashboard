@@ -6,6 +6,33 @@ const COL={Meta:'#1877F2',Snapchat:'#f4d817',TikTok:'#111',Google:'#4285F4',Pint
 const CPM_BENCHMARK=5.00;
 const CAMPAIGN_START='2026-08-09';
 
+// Logical campaign tags let one campaign use different names on each ad platform.
+const CAMPAIGN_TAGS={
+  all:{label:'كل الحملات',patterns:{}},
+  bmw:{
+    label:'BMW',
+    patterns:{
+      Meta:['car-r'],
+      Snapchat:['car-r'],
+      TikTok:['bmw'],
+      Google:['bmw'],
+      Pinterest:['bmw'],
+      X:['bmw']
+    }
+  },
+  sealtec:{
+    label:'Sealtec',
+    patterns:{
+      Meta:['sealtec'],
+      Snapchat:['sealtec'],
+      TikTok:['sealtec'],
+      Google:['sealtec'],
+      Pinterest:['sealtec'],
+      X:['sealtec']
+    }
+  }
+};
+
 const f=(x,d=0)=>Number.isFinite(x)?x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const n=v=>{
   if(v===null||v===undefined||v==='') return NaN;
@@ -27,10 +54,26 @@ function table(p){
   return null;
 }
 
-function parse(platform,p){
+function campaignMatches(platform,name,tag){
+  if(tag==='all') return true;
+  const cfg=CAMPAIGN_TAGS[tag];
+  if(!cfg) return true;
+  const patterns=cfg.patterns?.[platform]||[tag];
+  const value=norm(name);
+  return patterns.some(p=>value.includes(norm(p)));
+}
+
+function campaignFallback(platform,tag){
+  if(tag==='bmw') return CAMP[platform];
+  if(tag==='sealtec') return 'sealtec-jazeera-launch';
+  return CAMP[platform];
+}
+
+function parse(platform,p,tag=selectedTag){
   const t=table(p);
   if(!t||t.length<2) throw Error('No data rows');
-  const h=t[0].map(String),rs=t.slice(1);
+  const h=t[0].map(String);
+  let rs=t.slice(1);
   const ci=ix(h,['Campaign name','Campaign']);
   const ui=ix(h,['Cost (USD)','Spend (USD)']);
   const co=ix(h,['Cost','Spend','Amount spent']);
@@ -45,6 +88,17 @@ function parse(platform,p){
     platform==='Meta'?['Link clicks','Clicks (all)','Clicks','Actions']:
     ['Clicks','Link clicks','Actions']
   );
+
+  if(tag!=='all'){
+    if(ci>=0){
+      rs=rs.filter(r=>campaignMatches(platform,r[ci],tag));
+      if(!rs.length) throw Error(`لا توجد بيانات لحملة ${CAMPAIGN_TAGS[tag]?.label||tag}`);
+    }else{
+      // Current BMW queries were originally campaign-specific and some do not return Campaign name.
+      // They remain valid for BMW only. Other tags require Campaign name in the saved Supermetrics query.
+      if(tag!=='bmw') throw Error('أضف Campaign name إلى Saved Query في Supermetrics');
+    }
+  }
 
   let spend=0,ims=0,reach=0,acts=0,hasR=false;
   const camps=new Set();
@@ -70,7 +124,7 @@ function parse(platform,p){
 
   return {
     platform,
-    campaign:platform==='Google'?CAMP.Google:([...camps].join(' + ')||CAMP[platform]),
+    campaign:[...camps].join(' + ')||campaignFallback(platform,tag),
     spend,
     ims,
     reach:hasR?reach:NaN,
@@ -124,18 +178,20 @@ function arabicDate(v){
 
 let selectedRange={start:CAMPAIGN_START,end:localISODate()};
 let customDateActive=false;
+let selectedTag='bmw';
+let lastPayload=null;
 
 function updatePeriodText(){
   const period=document.querySelector('.period');
   if(!period) return;
-  if(customDateActive){
-    period.textContent=`الفترة: ${arabicDate(selectedRange.start)} — ${arabicDate(selectedRange.end)} · تحديث تلقائي كل 30 دقيقة`;
-  }else{
-    period.textContent='الفترة: 09 أغسطس 2026 — حتى اليوم · تحديث تلقائي كل 30 دقيقة';
-  }
+  const range=customDateActive
+    ? `${arabicDate(selectedRange.start)} — ${arabicDate(selectedRange.end)}`
+    : '09 أغسطس 2026 — حتى اليوم';
+  const tagLabel=CAMPAIGN_TAGS[selectedTag]?.label||selectedTag;
+  period.textContent=`الفترة: ${range} · الحملة: ${tagLabel} · تحديث تلقائي كل 30 دقيقة`;
 }
 
-function installDateFilter(){
+function installFilters(){
   const period=document.querySelector('.period');
   if(!period||document.getElementById('dateFilter')) return;
 
@@ -144,36 +200,55 @@ function installDateFilter(){
     .date-filter{width:100%;display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;flex-wrap:wrap;direction:rtl;margin:0 0 14px 0}
     .date-filter .df-group{display:flex;flex-direction:column;gap:4px;text-align:right}
     .date-filter label{font-family:Tajawal,sans-serif;font-size:11px;color:#667085;font-weight:700}
-    .date-filter input{height:36px;border:1px solid #d7dee8;border-radius:9px;background:#fff;padding:0 10px;font-family:JetBrains Mono,Tajawal,sans-serif;font-size:12px;color:#101828;outline:none;direction:ltr}
-    .date-filter input:focus{border-color:#0794d2;box-shadow:0 0 0 3px rgba(7,148,210,.10)}
+    .date-filter input,.date-filter select{height:36px;border:1px solid #d7dee8;border-radius:9px;background:#fff;padding:0 10px;font-family:Tajawal,Arial,sans-serif;font-size:12px;color:#101828;outline:none}
+    .date-filter input{font-family:JetBrains Mono,Tajawal,sans-serif;direction:ltr}
+    .date-filter select{min-width:150px;font-weight:700;cursor:pointer}
+    .date-filter input:focus,.date-filter select:focus{border-color:#0794d2;box-shadow:0 0 0 3px rgba(7,148,210,.10)}
     .date-filter button{height:36px;border-radius:9px;padding:0 14px;border:1px solid #d7dee8;background:#fff;color:#344054;font-family:Tajawal,sans-serif;font-weight:700;cursor:pointer}
     .date-filter .df-apply{background:#078dcc;color:#fff;border-color:#078dcc}
     .date-filter .df-title{height:36px;display:flex;align-items:center;font-size:12px;font-weight:800;color:#0f1728;margin-left:4px}
-    @media(max-width:700px){.date-filter{gap:6px}.date-filter .df-title{width:100%;height:auto}.date-filter input{max-width:145px}.date-filter button{padding:0 10px}}
+    .campaign-tag-active{color:#078dcc!important}
+    @media(max-width:700px){.date-filter{gap:6px}.date-filter .df-title{width:100%;height:auto}.date-filter input{max-width:145px}.date-filter select{min-width:130px}.date-filter button{padding:0 10px}}
   `;
   document.head.appendChild(css);
 
   const params=new URLSearchParams(location.search);
   const from=params.get('from');
   const to=params.get('to');
+  const campaign=params.get('campaign');
   if(validDate(from)&&validDate(to)&&from<=to){
     selectedRange={start:from,end:to};
     customDateActive=true;
   }
+  if(campaign&&CAMPAIGN_TAGS[campaign]) selectedTag=campaign;
 
   const box=document.createElement('div');
   box.id='dateFilter';
   box.className='date-filter';
   box.innerHTML=`
-    <div class="df-title">فلترة بالتاريخ</div>
+    <div class="df-title">فلاتر التقرير</div>
+    <div class="df-group"><label for="campaignTag">Campaign Tag</label><select id="campaignTag">
+      ${Object.entries(CAMPAIGN_TAGS).map(([key,c])=>`<option value="${key}" ${key===selectedTag?'selected':''}>${c.label}</option>`).join('')}
+    </select></div>
     <div class="df-group"><label for="dateFrom">من</label><input id="dateFrom" type="date" min="${CAMPAIGN_START}" max="${localISODate()}" value="${selectedRange.start}"></div>
     <div class="df-group"><label for="dateTo">إلى</label><input id="dateTo" type="date" min="${CAMPAIGN_START}" max="${localISODate()}" value="${selectedRange.end}"></div>
-    <button id="applyDate" class="df-apply" type="button">تطبيق</button>
+    <button id="applyDate" class="df-apply" type="button">تطبيق التاريخ</button>
     <button id="resetDate" type="button">حتى اليوم</button>
   `;
 
   const host=period.parentElement;
   host.insertBefore(box,host.firstChild);
+
+  document.getElementById('campaignTag').addEventListener('change',e=>{
+    selectedTag=e.target.value;
+    const u=new URL(location.href);
+    if(selectedTag==='bmw') u.searchParams.delete('campaign');
+    else u.searchParams.set('campaign',selectedTag);
+    history.replaceState({},'',u);
+    updatePeriodText();
+    if(lastPayload) renderPayload(lastPayload);
+    else loadAll();
+  });
 
   document.getElementById('applyDate').addEventListener('click',()=>{
     const start=document.getElementById('dateFrom').value;
@@ -215,6 +290,60 @@ function apiUrl(){
   return `/api/data?start_date=${encodeURIComponent(selectedRange.start)}&end_date=${encodeURIComponent(selectedRange.end)}`;
 }
 
+function renderPayload(p){
+  const notice=document.getElementById('notice');
+  notice.style.display='none';
+  const good=[],bad=[],stale=[];
+
+  for(const name of order){
+    const s=p.sources?.[name];
+    if(s?.ok){
+      try{
+        good.push(parse(name,s.data,selectedTag));
+        if(s.stale) stale.push(name);
+      }catch(e){bad.push([name,e.message]);}
+    }else{
+      bad.push([name,s?.error||'No data']);
+    }
+  }
+
+  const spend=good.reduce((a,d)=>a+d.spend,0);
+  const imp=good.reduce((a,d)=>a+d.ims,0);
+  const clicks=good.reduce((a,d)=>a+d.acts,0);
+  const reach=good.reduce((a,d)=>a+(Number.isFinite(d.reach)?d.reach:0),0);
+  const cpm=imp?spend/imp*1000:NaN;
+  const cpc=clicks?spend/clicks:NaN;
+
+  document.getElementById('badgeSpend').textContent='$'+f(spend,2);
+  document.getElementById('kSpend').textContent='$'+f(spend,2);
+  document.getElementById('kImp').textContent=f(imp);
+  document.getElementById('kClicks').textContent=f(clicks);
+  document.getElementById('kCpm').textContent='$'+f(cpm,3);
+  document.getElementById('kPlatforms').textContent=f(good.length);
+  document.getElementById('kCpc').textContent='$'+f(cpc,3);
+  document.getElementById('kReach').textContent=f(reach);
+
+  const stamp=new Date(p.updatedAt||Date.now()).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
+  document.getElementById('kUpdated').textContent=stamp;
+
+  document.getElementById('gauges').innerHTML=[
+    gauge('إجمالي الإنفاق','$'+f(spend,0),'USD',spend/8000,'#078dcc'),
+    gauge('مرات الظهور',f(imp),'Impressions',imp/16000000,'#12b76a'),
+    gauge('النقرات / الإجراءات',f(clicks),'Actions',clicks/20000,'#f59e0b'),
+    gauge('Blended CPM','$'+f(cpm,2),cpmStatus(cpm),(cpm||0)/2,'#0f1728')
+  ].join('');
+
+  document.getElementById('paidRows').innerHTML=good.map(paidRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="5" class="err">${e}</td></tr>`).join('');
+  const max=Math.max(...good.map(d=>d.spend),1);
+  document.getElementById('bars').innerHTML=[...good].sort((a,b)=>b.spend-a.spend).map(d=>bar(d,max)).join('');
+  document.getElementById('rows').innerHTML=good.map(detailRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="10" class="err">${e}</td></tr>`).join('');
+
+  const messages=[];
+  if(bad.length) messages.push('بعض المنصات لا تحتوي بيانات مطابقة لـ '+(CAMPAIGN_TAGS[selectedTag]?.label||selectedTag)+': '+bad.map(x=>x[0]).join('، ')+'.');
+  if(stale.length) messages.push(stale.join('، ')+' تعرض آخر بيانات محفوظة بسبب حد الاستعلام اليومي.');
+  if(messages.length){notice.style.display='block';notice.textContent=messages.join(' ');}
+}
+
 async function loadAll(){
   const btn=document.getElementById('refresh');
   if(btn){btn.disabled=true;btn.textContent='جاري التحديث…';}
@@ -225,55 +354,8 @@ async function loadAll(){
     const r=await fetch(apiUrl());
     if(!r.ok) throw Error('HTTP '+r.status);
     const p=await r.json();
-    const good=[],bad=[],stale=[];
-
-    for(const name of order){
-      const s=p.sources?.[name];
-      if(s?.ok){
-        try{
-          good.push(parse(name,s.data));
-          if(s.stale) stale.push(name);
-        }catch(e){bad.push([name,e.message]);}
-      }else{
-        bad.push([name,s?.error||'No data']);
-      }
-    }
-
-    const spend=good.reduce((a,d)=>a+d.spend,0);
-    const imp=good.reduce((a,d)=>a+d.ims,0);
-    const clicks=good.reduce((a,d)=>a+d.acts,0);
-    const reach=good.reduce((a,d)=>a+(Number.isFinite(d.reach)?d.reach:0),0);
-    const cpm=imp?spend/imp*1000:NaN;
-    const cpc=clicks?spend/clicks:NaN;
-
-    document.getElementById('badgeSpend').textContent='$'+f(spend,2);
-    document.getElementById('kSpend').textContent='$'+f(spend,2);
-    document.getElementById('kImp').textContent=f(imp);
-    document.getElementById('kClicks').textContent=f(clicks);
-    document.getElementById('kCpm').textContent='$'+f(cpm,3);
-    document.getElementById('kPlatforms').textContent=f(good.length);
-    document.getElementById('kCpc').textContent='$'+f(cpc,3);
-    document.getElementById('kReach').textContent=f(reach);
-
-    const stamp=new Date(p.updatedAt||Date.now()).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
-    document.getElementById('kUpdated').textContent=stamp;
-
-    document.getElementById('gauges').innerHTML=[
-      gauge('إجمالي الإنفاق','$'+f(spend,0),'USD',spend/8000,'#078dcc'),
-      gauge('مرات الظهور',f(imp),'Impressions',imp/16000000,'#12b76a'),
-      gauge('النقرات / الإجراءات',f(clicks),'Actions',clicks/20000,'#f59e0b'),
-      gauge('Blended CPM','$'+f(cpm,2),cpmStatus(cpm),(cpm||0)/2,'#0f1728')
-    ].join('');
-
-    document.getElementById('paidRows').innerHTML=good.map(paidRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="5" class="err">${e}</td></tr>`).join('');
-    const max=Math.max(...good.map(d=>d.spend),1);
-    document.getElementById('bars').innerHTML=[...good].sort((a,b)=>b.spend-a.spend).map(d=>bar(d,max)).join('');
-    document.getElementById('rows').innerHTML=good.map(detailRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="10" class="err">${e}</td></tr>`).join('');
-
-    const messages=[];
-    if(bad.length) messages.push('تعذر تحديث '+bad.map(x=>x[0]).join('، ')+' لهذه الفترة. باقي المنصات تم تحديثها.');
-    if(stale.length) messages.push(stale.join('، ')+' تعرض آخر بيانات محفوظة بسبب حد الاستعلام اليومي.');
-    if(messages.length){notice.style.display='block';notice.textContent=messages.join(' ');}
+    lastPayload=p;
+    renderPayload(p);
   }catch(e){
     notice.style.display='block';
     notice.textContent='تعذر الاتصال ببيانات Supermetrics: '+e.message;
@@ -282,7 +364,7 @@ async function loadAll(){
   }
 }
 
-installDateFilter();
+installFilters();
 loadAll();
 setInterval(loadAll,1800000);
 document.getElementById('refresh')?.addEventListener('click',loadAll);
