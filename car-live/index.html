@@ -29,7 +29,7 @@
         <div class="period">الفترة: <span class="num">09 أغسطس 2026</span> — <span class="num">حتى اليوم</span> · تحديث تلقائي كل 5 دقائق</div>
       </div>
       <div class="badge">
-        <div class="lbl">إجمالي الإنفاق</div>
+        <div class="lbl">حالة البيانات</div>
         <div class="val num" id="badgeSpend">—</div>
         <button id="refresh" style="margin-top:8px;border:0;background:#078dcc;color:#fff;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer">تحديث الآن</button>
       </div>
@@ -38,8 +38,8 @@
     <div class="notice" id="notice"></div>
 
     <div class="cluster-head">
-      <h2>مؤشرات الأداء الرئيسية</h2>
-      <span>— قراءات لوحة القيادة</span>
+      <h2>مؤشرات كفاءة الحملة</h2>
+      <span>— كفاءة التفاعل والتكلفة حسب البيانات الفعلية</span>
     </div>
 
     <div class="gauges" id="gauges"></div>
@@ -48,7 +48,7 @@
       <div class="kpi spend"><div class="lbl">الإنفاق الإعلاني المدفوع</div><div class="val num" id="kSpend">—</div></div>
       <div class="kpi"><div class="lbl">مرات الظهور</div><div class="val num" id="kImp">—</div></div>
       <div class="kpi"><div class="lbl">النقرات / الإجراءات</div><div class="val num" id="kClicks">—</div></div>
-      <div class="kpi"><div class="lbl">متوسط CPM</div><div class="val num" id="kCpm">—</div></div>
+      <div class="kpi"><div class="lbl">المنصات التي ترسل Reach</div><div class="val num" id="kCpm">—</div></div>
       <div class="kpi"><div class="lbl">عدد المنصات النشطة</div><div class="val num" id="kPlatforms">—</div></div>
       <div class="kpi"><div class="lbl">متوسط تكلفة الإجراء</div><div class="val num" id="kCpc">—</div></div>
       <div class="kpi green"><div class="lbl">إجمالي Reach المتاح</div><div class="val num" id="kReach">—</div></div>
@@ -57,7 +57,7 @@
 
     <div class="two-col">
       <section class="panel">
-        <div class="panel-head"><h2>الإعلانات المدفوعة — حسب المنصة</h2><div class="note">الإنفاق مقابل النقرات / الإجراءات</div></div>
+        <div class="panel-head"><h2>الإعلانات المدفوعة — حسب المنصة</h2><div class="note">مقارنة مباشرة للأداء والكفاءة بين المنصات</div></div>
         <table>
           <thead><tr><th>المنصة</th><th class="n">الإنفاق</th><th class="n">الظهور</th><th class="n">النقرات</th><th class="n">CTR</th><th class="n">CPC</th></tr></thead>
           <tbody id="paidRows"></tbody>
@@ -65,15 +65,15 @@
       </section>
 
       <section class="panel">
-        <div class="panel-head"><h2>توزيع الإنفاق حسب المنصة</h2><div class="note">حصة كل منصة من أعلى إنفاق</div></div>
+        <div class="panel-head"><h2>توزيع الإنفاق حسب المنصة</h2><div class="note">يوضح تركّز الميزانية وليس تكرار أرقام الجدول</div></div>
         <div id="bars"></div>
       </section>
     </div>
 
     <section class="panel">
-      <div class="panel-head"><h2>البيانات التفصيلية</h2><div class="note">Reach لا يتم جمعه كـ Unique Cross-platform.</div></div>
+      <div class="panel-head"><h2>تفاصيل إضافية حسب المنصة</h2><div class="note">حقول إضافية غير مكررة من جدول الأداء أعلاه · Reach ليس Unique Cross-platform.</div></div>
       <table class="detail">
-        <thead><tr><th>Platform</th><th>Campaign</th><th class="n">Spend USD</th><th class="n">Spend SAR</th><th class="n">Impressions</th><th class="n">Reach</th><th>Primary action</th><th class="n">Actions</th><th class="n">CTR</th><th class="n">CPM USD</th><th class="n">Cost / action</th></tr></thead>
+        <thead><tr><th>Platform</th><th>Campaign</th><th class="n">Spend SAR</th><th class="n">Reach</th><th>Primary action</th><th class="n">CPM USD</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </section>
@@ -104,5 +104,70 @@
     })();
   </script>
   <script src="/app.js"></script>
+  <script>
+    // Replace duplicated headline totals with distinct, decision-useful efficiency insights.
+    (() => {
+      const baseRenderPayload = renderPayload;
+
+      const insightCard = (label, value, sub, accent = '#078dcc') => `
+        <div class="gauge" style="padding:22px 14px 24px">
+          <div style="height:4px;position:absolute;top:0;right:0;left:0;background:${accent}"></div>
+          <div class="gname">${label}</div>
+          <div class="gvalue num" style="margin-top:18px">${value}</div>
+          <div class="gsub" style="margin-top:8px;line-height:1.6">${sub}</div>
+        </div>`;
+
+      renderPayload = function(p) {
+        baseRenderPayload(p);
+
+        const good = [];
+        const failed = [];
+        for (const name of order) {
+          const s = p.sources?.[name];
+          if (!s?.ok) {
+            failed.push(name);
+            continue;
+          }
+          try {
+            good.push(parse(name, s.data, selectedTag));
+          } catch (_) {
+            failed.push(name);
+          }
+        }
+
+        const spend = good.reduce((a, d) => a + d.spend, 0);
+        const imp = good.reduce((a, d) => a + d.ims, 0);
+        const clicks = good.reduce((a, d) => a + d.acts, 0);
+        const blendedCtr = imp ? (clicks / imp) * 100 : NaN;
+        const blendedCpm = imp ? (spend / imp) * 1000 : NaN;
+        const reachPlatforms = good.filter(d => Number.isFinite(d.reach) && d.reach > 0).length;
+        const validCpa = good.filter(d => Number.isFinite(d.cpa) && d.acts > 0).sort((a, b) => a.cpa - b.cpa);
+        const validCtr = good.filter(d => Number.isFinite(d.ctr) && d.ims > 0).sort((a, b) => b.ctr - a.ctr);
+        const bestCpa = validCpa[0];
+        const bestCtr = validCtr[0];
+
+        document.getElementById('badgeSpend').textContent = failed.length ? 'PARTIAL' : 'LIVE';
+        document.getElementById('kCpm').textContent = `${f(reachPlatforms)} / ${f(good.length)}`;
+
+        document.getElementById('gauges').innerHTML = [
+          insightCard('Blended CTR', `${f(blendedCtr, 2)}%`, 'Clicks / Impressions', '#078dcc'),
+          insightCard('Blended CPM', `$${f(blendedCpm, 2)}`, Number.isFinite(blendedCpm) ? `Benchmark: $${CPM_BENCHMARK.toFixed(2)}` : 'Benchmark unavailable', '#0f1728'),
+          insightCard('أفضل تكلفة / إجراء', bestCpa ? `$${f(bestCpa.cpa, 2)}` : '—', bestCpa ? `${bestCpa.platform} · Lowest CPA` : 'No action data', '#12b76a'),
+          insightCard('أفضل CTR', bestCtr ? `${f(bestCtr.ctr, 2)}%` : '—', bestCtr ? `${bestCtr.platform} · Highest CTR` : 'No impression data', '#f59e0b')
+        ].join('');
+
+        document.getElementById('rows').innerHTML = good.map(d => `
+          <tr>
+            <td><b>${d.platform}</b></td>
+            <td>${d.campaign}</td>
+            <td class="n">${f(d.spend * 3.75, 2)}</td>
+            <td class="n">${f(d.reach)}</td>
+            <td>${d.action}</td>
+            <td class="n">$${f(d.cpm, 3)}</td>
+          </tr>`).join('') + failed.map(name => `
+          <tr><td><b>${name}</b></td><td colspan="5" class="err">No matching data</td></tr>`).join('');
+      };
+    })();
+  </script>
 </body>
 </html>
