@@ -1,7 +1,7 @@
-const order=['Meta','Snapchat','TikTok','Google','Pinterest','X'];
-const CUR={Meta:'USD',Snapchat:'USD',TikTok:'SAR',Google:'USD',Pinterest:'USD',X:'USD'};
-const ACTION={Meta:'Link clicks',Snapchat:'Swipes',TikTok:'Clicks',Google:'Clicks',Pinterest:'Pin clicks',X:'Link clicks'};
-const COL={Meta:'#1877F2',Snapchat:'#f4d817',TikTok:'#111',Google:'#4285F4',Pinterest:'#E60023',X:'#000'};
+const order=['Meta','Snapchat','TikTok','Google','LinkedIn','Pinterest','X'];
+const CUR={Meta:'USD',Snapchat:'USD',TikTok:'SAR',Google:'USD',LinkedIn:'SAR',Pinterest:'USD',X:'USD'};
+const ACTION={Meta:'Link clicks',Snapchat:'Swipes',TikTok:'Clicks',Google:'Clicks',LinkedIn:'Clicks',Pinterest:'Pin clicks',X:'Link clicks'};
+const COL={Meta:'#1877F2',Snapchat:'#f4d817',TikTok:'#111',Google:'#4285F4',LinkedIn:'#0A66C2',Pinterest:'#E60023',X:'#000'};
 const CPM_BENCHMARK=5.00;
 const TAG_STORAGE_KEY='jazeeraCampaignTagsV1';
 const currentYear=new Date().getFullYear();
@@ -9,8 +9,8 @@ const DEFAULT_START=`${currentYear}-01-01`;
 
 const CAMPAIGN_TAGS={
   all:{label:'كل الحملات',patterns:{},system:true},
-  bmw:{label:'BMW',patterns:{Meta:['car-r','bmw'],Snapchat:['car-r','bmw'],TikTok:['bmw'],Google:['bmw'],Pinterest:['bmw'],X:['bmw']},system:true},
-  sealtec:{label:'Sealtec',patterns:{Meta:['sealtec'],Snapchat:['sealtec'],TikTok:['sealtec'],Google:['sealtec'],Pinterest:['sealtec'],X:['sealtec']},system:true}
+  bmw:{label:'BMW',patterns:{Meta:['car-r','bmw'],Snapchat:['car-r','bmw'],TikTok:['bmw'],Google:['bmw'],LinkedIn:['bmw','car-r','car raffle'],Pinterest:['bmw'],X:['bmw']},system:true},
+  sealtec:{label:'Sealtec',patterns:{Meta:['sealtec'],Snapchat:['sealtec'],TikTok:['sealtec'],Google:['sealtec'],LinkedIn:['sealtec'],Pinterest:['sealtec'],X:['sealtec']},system:true}
 };
 
 function loadCustomTags(){
@@ -91,6 +91,7 @@ function parse(platform,p,tag=selectedTag){
     platform==='Pinterest'?['Pin clicks','Clicks','Clicks paid','Outbound clicks']:
     platform==='X'?['Link clicks','Clicks']:
     platform==='Meta'?['Link clicks','Clicks (all)','Clicks','Actions']:
+    platform==='LinkedIn'?['Clicks','Link clicks','Total clicks']:
     ['Clicks','Link clicks','Actions']
   );
 
@@ -332,7 +333,7 @@ function renderPayload(p){
   if(bad.length) messages.push('مصادر غير متاحة أو بدون بيانات مطابقة: '+bad.map(x=>x[0]).join('، ')+'.');
   if(stale.length) messages.push(stale.join('، ')+' تعرض بيانات محفوظة وليست Live.');
   if(selectedTag==='all'&&missingCampaignField.length) messages.push('لا يمكن التحقق من أسماء كل الحملات في '+missingCampaignField.join('، ')+' لأن Saved Query لا يحتوي Campaign name.');
-  if(selectedTag==='all'&&legacy.length) messages.push('هذه المنصات تستخدم Saved Query القديم: '+legacy.join('، ')+'. للتأكيد الكامل على All Campaigns استخدم متغيرات SM_*_ALL_URL في Vercel.');
+  if(selectedTag==='all'&&legacy.length) messages.push('هذه المنصات تستخدم Saved Query القديم: '+legacy.join('، ')+'.');
 
   if(selectedTag==='all'&&campaignCount>0){
     const names=[...campaignNames];
