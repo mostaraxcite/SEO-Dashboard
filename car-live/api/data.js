@@ -34,7 +34,8 @@ export default async function handler(req,res){
     Meta:sourceConfig(process.env.SM_META_ALL_URL,process.env.SM_META_URL),
     Google:sourceConfig(process.env.SM_GOOGLE_ALL_URL,process.env.SM_GOOGLE_URL),
     Snapchat:sourceConfig(process.env.SM_SNAPCHAT_ALL_URL,process.env.SM_SNAPCHAT_URL),
-    TikTok:sourceConfig(process.env.SM_TIKTOK_ALL_URL,process.env.SM_TIKTOK_URL)
+    TikTok:sourceConfig(process.env.SM_TIKTOK_ALL_URL,process.env.SM_TIKTOK_URL),
+    LinkedIn:sourceConfig(process.env.SM_LINKEDIN_ALL_URL,process.env.SM_LINKEDIN_URL)
   };
 
   const out={};
@@ -76,6 +77,6 @@ export default async function handler(req,res){
     updatedAt:new Date().toISOString(),
     dateRange:{start_date:range.start,end_date:range.end,custom:range.custom},
     sources:out,
-    refreshPolicy:{every30Minutes:['Meta','Google','Snapchat','TikTok'],daily:['Pinterest','X']}
+    refreshPolicy:{every30Minutes:['Meta','Google','Snapchat','TikTok','LinkedIn'],daily:['Pinterest','X']}
   });
 }
