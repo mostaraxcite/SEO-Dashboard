@@ -1,20 +1,3 @@
-const FALLBACK={
-  Pinterest:{
-    meta:{status_code:'FALLBACK',note:'Last known successful dashboard values'},
-    data:[
-      ['Campaign','Currency','Cost','Impressions','Reach','Pin clicks','CTR','CPM','CPC'],
-      ['bmw-car-raffle','USD',492.36,1122225,0,1758,0.0015665,0.4387,0.2801]
-    ]
-  },
-  X:{
-    meta:{status_code:'FALLBACK',note:'Last known successful dashboard values'},
-    data:[
-      ['Campaign','Currency','Cost','Impressions','Reach','Link clicks','CTR','CPM','CPC'],
-      ['X-Bmw-Car-2026','USD',646.57,696913,0,478,0.0006859,0.9278,1.3527]
-    ]
-  }
-};
-
 const DATE_RE=/^\d{4}-\d{2}-\d{2}$/;
 
 function getDateRange(req){
@@ -34,22 +17,24 @@ function withDateRange(rawUrl,range){
   return u.toString();
 }
 
-async function pull(name,rawUrl,range){
-  if(!rawUrl){
-    if(range.custom) return {ok:false,error:'Missing environment variable',stale:false};
-    return {ok:true,data:FALLBACK[name],stale:true,error:'Missing environment variable'};
+function sourceConfig(allUrl,legacyUrl){
+  if(allUrl) return {url:allUrl,scope:'all-campaigns'};
+  if(legacyUrl) return {url:legacyUrl,scope:'legacy-query'};
+  return {url:null,scope:'missing'};
+}
+
+async function pull(name,cfg,range){
+  if(!cfg.url){
+    return {ok:false,error:'Missing Supermetrics URL',stale:false,queryScope:cfg.scope};
   }
   try{
-    const url=withDateRange(rawUrl,range);
+    const url=withDateRange(cfg.url,range);
     const r=await fetch(url,{cache:'no-store'});
     const text=await r.text();
     if(!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,220)}`);
-    return {ok:true,data:JSON.parse(text),stale:false};
+    return {ok:true,data:JSON.parse(text),stale:false,queryScope:cfg.scope};
   }catch(e){
-    if(range.custom){
-      return {ok:false,error:String(e?.message||e),stale:false};
-    }
-    return {ok:true,data:FALLBACK[name],stale:true,error:String(e?.message||e)};
+    return {ok:false,error:String(e?.message||e),stale:false,queryScope:cfg.scope};
   }
 }
 
@@ -60,15 +45,18 @@ export default async function handler(req,res){
     return;
   }
 
+  const pinterestCfg=sourceConfig(process.env.SM_PINTEREST_ALL_URL,process.env.SM_PINTEREST_URL);
+  const xCfg=sourceConfig(process.env.SM_X_ALL_URL,process.env.SM_X_URL);
+
   const [Pinterest,X]=await Promise.all([
-    pull('Pinterest',process.env.SM_PINTEREST_URL,range),
-    pull('X',process.env.SM_X_URL,range)
+    pull('Pinterest',pinterestCfg,range),
+    pull('X',xCfg,range)
   ]);
 
-  // One cached Supermetrics request per selected date range every 24 hours.
   res.setHeader('Cache-Control','public, max-age=0, s-maxage=86400, stale-while-revalidate=3600');
   res.setHeader('Vercel-CDN-Cache-Control','max-age=86400');
   res.status(200).json({
+    dashboardScope:'all-campaigns',
     updatedAt:new Date().toISOString(),
     dateRange:{start_date:range.start,end_date:range.end,custom:range.custom},
     refreshMode:'daily',
