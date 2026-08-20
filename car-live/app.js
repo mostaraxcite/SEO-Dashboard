@@ -4,7 +4,7 @@ const CAMP={Meta:'CAR-R',Snapchat:'CAR-R(1)',TikTok:'bmw',Google:'Yt-BMW Car Raf
 const ACTION={Meta:'Link clicks',Snapchat:'Swipes',TikTok:'Clicks',Google:'Clicks',Pinterest:'Pin clicks',X:'Link clicks'};
 const COL={Meta:'#1877F2',Snapchat:'#f4d817',TikTok:'#111',Google:'#4285F4',Pinterest:'#E60023',X:'#000'};
 const CPM_BENCHMARK=5.00;
-const CAMPAIGN_START='2026-08-09';
+const CAMPAIGN_START='2020-01-01';
 const TAG_STORAGE_KEY='jazeeraCampaignTagsV1';
 
 const CAMPAIGN_TAGS={
@@ -13,20 +13,8 @@ const CAMPAIGN_TAGS={
   sealtec:{label:'Sealtec',patterns:{Meta:['sealtec'],Snapchat:['sealtec'],TikTok:['sealtec'],Google:['sealtec'],Pinterest:['sealtec'],X:['sealtec']},system:true}
 };
 
-function loadCustomTags(){
-  try{
-    const saved=JSON.parse(localStorage.getItem(TAG_STORAGE_KEY)||'{}');
-    for(const [key,cfg] of Object.entries(saved)){
-      if(!cfg||!cfg.label||!cfg.patterns) continue;
-      CAMPAIGN_TAGS[key]={label:String(cfg.label),patterns:cfg.patterns,system:false};
-    }
-  }catch(_){/* ignore malformed local data */}
-}
-function saveCustomTags(){
-  const out={};
-  for(const [key,cfg] of Object.entries(CAMPAIGN_TAGS)) if(!cfg.system) out[key]={label:cfg.label,patterns:cfg.patterns};
-  localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(out));
-}
+function loadCustomTags(){try{const saved=JSON.parse(localStorage.getItem(TAG_STORAGE_KEY)||'{}');for(const [key,cfg] of Object.entries(saved)){if(cfg?.label&&cfg?.patterns)CAMPAIGN_TAGS[key]={label:String(cfg.label),patterns:cfg.patterns,system:false}}}catch(_){}}
+function saveCustomTags(){const out={};for(const [key,cfg] of Object.entries(CAMPAIGN_TAGS))if(!cfg.system)out[key]={label:cfg.label,patterns:cfg.patterns};localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(out))}
 loadCustomTags();
 
 const f=(x,d=0)=>Number.isFinite(x)?x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
@@ -37,8 +25,12 @@ function table(p){for(const x of [p?.data,p?.data?.data,p?.results,p?.result?.da
 function campaignMatches(platform,name,tag){if(tag==='all')return true;const cfg=CAMPAIGN_TAGS[tag];if(!cfg)return true;const patterns=cfg.patterns?.[platform]||[];const value=norm(name);return patterns.some(p=>value.includes(norm(p)))}
 function campaignFallback(platform,tag){if(tag==='bmw')return CAMP[platform];if(tag==='sealtec')return 'sealtec-jazeera-launch';return CAMPAIGN_TAGS[tag]?.label||CAMP[platform]}
 
+function localISODate(date=new Date()){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');return`${y}-${m}-${d}`}
+function validDate(v){return/^\d{4}-\d{2}-\d{2}$/.test(v)}
+function arabicDate(v){if(!validDate(v))return v;const[y,m,d]=v.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('ar-SA',{day:'2-digit',month:'short',year:'numeric'})}
+
 let selectedRange={start:CAMPAIGN_START,end:localISODate()};
-let customDateActive=false;
+let customDateActive=true;
 let selectedTag='bmw';
 let lastPayload=null;
 
@@ -49,7 +41,7 @@ function parse(platform,p,tag=selectedTag){
   const ac=ix(h,platform==='Snapchat'?['Swipes','Clicks']:platform==='Pinterest'?['Pin clicks','Clicks','Clicks paid','Outbound clicks']:platform==='X'?['Link clicks','Clicks']:platform==='Meta'?['Link clicks','Clicks (all)','Clicks','Actions']:['Clicks','Link clicks','Actions']);
   if(tag!=='all'){
     if(ci>=0){rs=rs.filter(r=>campaignMatches(platform,r[ci],tag));if(!rs.length)throw Error(`لا توجد بيانات لحملة ${CAMPAIGN_TAGS[tag]?.label||tag}`)}
-    else if(tag!=='bmw') throw Error('أضف Campaign name إلى Saved Query في Supermetrics');
+    else if(tag!=='bmw')throw Error('أضف Campaign name إلى Saved Query في Supermetrics');
   }
   let spend=0,ims=0,reach=0,acts=0,hasR=false;const camps=new Set();
   for(const r of rs){
@@ -67,28 +59,15 @@ function cpmStatus(cpm){if(!Number.isFinite(cpm))return`<span style="color:#6670
 function paidRow(d){return`<tr><td><div class="platform"><i class="pdot" style="background:${COL[d.platform]}"></i>${d.platform}</div></td><td class="n">$${f(d.spend,2)}</td><td class="n">${f(d.ims)}</td><td class="n">${f(d.acts)}</td><td class="n">${f(d.ctr,2)}%</td><td class="n">$${f(d.cpa,2)}</td></tr>`}
 function detailRow(d){return`<tr><td><b>${d.platform}</b></td><td>${d.campaign}</td><td class="n">$${f(d.spend,2)}</td><td class="n">${f(d.spend*3.75,2)}</td><td class="n">${f(d.ims)}</td><td class="n">${f(d.reach)}</td><td>${d.action}</td><td class="n">${f(d.acts)}</td><td class="n">${f(d.ctr,3)}%</td><td class="n">$${f(d.cpm,3)}</td><td class="n">$${f(d.cpa,3)}</td></tr>`}
 function bar(d,max){const pct=max?d.spend/max*100:0;return`<div class="bar"><div class="bar-top"><div class="bar-name"><i class="pdot" style="background:${COL[d.platform]}"></i>${d.platform}</div><div class="num">$${f(d.spend,2)}</div></div><div class="track"><div class="fill" style="width:${pct}%"></div></div></div>`}
-function localISODate(date=new Date()){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');return`${y}-${m}-${d}`}
-function validDate(v){return/^\d{4}-\d{2}-\d{2}$/.test(v)}
-function arabicDate(v){if(!validDate(v))return v;const[y,m,d]=v.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('ar-SA',{day:'2-digit',month:'short',year:'numeric'})}
 
-function updatePeriodText(){const period=document.querySelector('.period');if(!period)return;const range=customDateActive?`${arabicDate(selectedRange.start)} — ${arabicDate(selectedRange.end)}`:'09 أغسطس 2026 — حتى اليوم';period.textContent=`الفترة: ${range} · الحملة: ${CAMPAIGN_TAGS[selectedTag]?.label||selectedTag} · تحديث تلقائي كل 30 دقيقة`}
+function updatePeriodText(){const period=document.querySelector('.period');if(!period)return;const range=`${arabicDate(selectedRange.start)} — ${arabicDate(selectedRange.end)}`;period.textContent=`الفترة: ${range} · الحملة: ${CAMPAIGN_TAGS[selectedTag]?.label||selectedTag} · تحديث تلقائي كل 30 دقيقة`}
 function tagOptions(){return Object.entries(CAMPAIGN_TAGS).map(([key,c])=>`<option value="${key}" ${key===selectedTag?'selected':''}>${c.label}</option>`).join('')}
 function refreshTagControls(){const select=document.getElementById('campaignTag');if(select){select.innerHTML=tagOptions();select.value=selectedTag}const del=document.getElementById('deleteCampaignTag');if(del)del.style.display=CAMPAIGN_TAGS[selectedTag]?.system===false?'inline-flex':'none'}
 function splitPatterns(value,fallback){const a=String(value||'').split(',').map(v=>v.trim()).filter(Boolean);return a.length?a:[fallback]}
 function openTagModal(){const modal=document.getElementById('tagModal');if(modal)modal.style.display='flex'}
 function closeTagModal(){const modal=document.getElementById('tagModal');if(modal)modal.style.display='none'}
-function createTagFromModal(){
-  const label=document.getElementById('tagName').value.trim();if(!label){alert('اكتب اسم التاج');return}
-  const key='custom_'+Date.now();const patterns={};
-  for(const p of order){patterns[p]=splitPatterns(document.getElementById('tag_'+p).value,label)}
-  CAMPAIGN_TAGS[key]={label,patterns,system:false};saveCustomTags();selectedTag=key;refreshTagControls();
-  const u=new URL(location.href);u.searchParams.set('campaign',key);history.replaceState({},'',u);updatePeriodText();closeTagModal();
-  document.querySelectorAll('#tagModal input').forEach(i=>i.value='');if(lastPayload)renderPayload(lastPayload);
-}
-function deleteSelectedTag(){
-  const cfg=CAMPAIGN_TAGS[selectedTag];if(!cfg||cfg.system!==false)return;if(!confirm(`حذف تاج ${cfg.label}؟`))return;
-  delete CAMPAIGN_TAGS[selectedTag];saveCustomTags();selectedTag='bmw';refreshTagControls();const u=new URL(location.href);u.searchParams.delete('campaign');history.replaceState({},'',u);updatePeriodText();if(lastPayload)renderPayload(lastPayload);
-}
+function createTagFromModal(){const label=document.getElementById('tagName').value.trim();if(!label){alert('اكتب اسم التاج');return}const key='custom_'+Date.now(),patterns={};for(const p of order)patterns[p]=splitPatterns(document.getElementById('tag_'+p).value,label);CAMPAIGN_TAGS[key]={label,patterns,system:false};saveCustomTags();selectedTag=key;refreshTagControls();const u=new URL(location.href);u.searchParams.set('campaign',key);history.replaceState({},'',u);updatePeriodText();closeTagModal();document.querySelectorAll('#tagModal input').forEach(i=>i.value='');if(lastPayload)renderPayload(lastPayload)}
+function deleteSelectedTag(){const cfg=CAMPAIGN_TAGS[selectedTag];if(!cfg||cfg.system!==false)return;if(!confirm(`حذف تاج ${cfg.label}؟`))return;delete CAMPAIGN_TAGS[selectedTag];saveCustomTags();selectedTag='bmw';refreshTagControls();const u=new URL(location.href);u.searchParams.delete('campaign');history.replaceState({},'',u);updatePeriodText();if(lastPayload)renderPayload(lastPayload)}
 
 function installFilters(){
   const period=document.querySelector('.period');if(!period||document.getElementById('dateFilter'))return;
@@ -98,24 +77,24 @@ function installFilters(){
     @media(max-width:700px){.date-filter{gap:6px}.date-filter .df-title{width:100%;height:auto}.date-filter input{max-width:145px}.date-filter select{min-width:130px}.date-filter button{padding:0 10px}.tag-grid{grid-template-columns:1fr}}
   `;document.head.appendChild(css);
   const params=new URLSearchParams(location.search),from=params.get('from'),to=params.get('to'),campaign=params.get('campaign');
-  if(validDate(from)&&validDate(to)&&from<=to){selectedRange={start:from,end:to};customDateActive=true}if(campaign&&CAMPAIGN_TAGS[campaign])selectedTag=campaign;
+  if(validDate(from)&&validDate(to)&&from<=to){selectedRange={start:from,end:to}}if(campaign&&CAMPAIGN_TAGS[campaign])selectedTag=campaign;
   const box=document.createElement('div');box.id='dateFilter';box.className='date-filter';box.innerHTML=`
     <div class="df-title">فلاتر التقرير</div>
     <div class="df-group"><label for="campaignTag">Campaign Tag</label><select id="campaignTag">${tagOptions()}</select></div>
     <button id="addCampaignTag" class="df-add" type="button">+ إضافة تاج</button><button id="deleteCampaignTag" class="df-delete" type="button" style="display:none">حذف التاج</button>
     <div class="df-group"><label for="dateFrom">من</label><input id="dateFrom" type="date" min="${CAMPAIGN_START}" max="${localISODate()}" value="${selectedRange.start}"></div>
     <div class="df-group"><label for="dateTo">إلى</label><input id="dateTo" type="date" min="${CAMPAIGN_START}" max="${localISODate()}" value="${selectedRange.end}"></div>
-    <button id="applyDate" class="df-apply" type="button">تطبيق التاريخ</button><button id="resetDate" type="button">حتى اليوم</button>`;
+    <button id="applyDate" class="df-apply" type="button">تطبيق التاريخ</button><button id="resetDate" type="button">من 2020 حتى اليوم</button>`;
   period.parentElement.insertBefore(box,period.parentElement.firstChild);
   const modal=document.createElement('div');modal.id='tagModal';modal.className='tag-modal';modal.innerHTML=`<div class="tag-card"><h3>إضافة Campaign Tag</h3><div class="tag-help">اكتب اسم التاج، ثم الكلمة أو جزء اسم الحملة المطابق لكل منصة. يمكن كتابة أكثر من قيمة مفصولة بفاصلة.</div><div class="tag-grid"><div class="tag-field full"><label>اسم التاج</label><input id="tagName" placeholder="مثال: National Day"></div>${order.map(p=>`<div class="tag-field"><label>${p}</label><input id="tag_${p}" placeholder="اسم أو جزء اسم الحملة"></div>`).join('')}</div><div class="tag-actions"><button id="saveTag" class="save-tag">حفظ التاج</button><button id="cancelTag">إلغاء</button></div></div>`;document.body.appendChild(modal);
   document.getElementById('campaignTag').addEventListener('change',e=>{selectedTag=e.target.value;const u=new URL(location.href);if(selectedTag==='bmw')u.searchParams.delete('campaign');else u.searchParams.set('campaign',selectedTag);history.replaceState({},'',u);refreshTagControls();updatePeriodText();if(lastPayload)renderPayload(lastPayload);else loadAll()});
   document.getElementById('addCampaignTag').addEventListener('click',openTagModal);document.getElementById('deleteCampaignTag').addEventListener('click',deleteSelectedTag);document.getElementById('saveTag').addEventListener('click',createTagFromModal);document.getElementById('cancelTag').addEventListener('click',closeTagModal);modal.addEventListener('click',e=>{if(e.target===modal)closeTagModal()});
   document.getElementById('applyDate').addEventListener('click',()=>{const start=document.getElementById('dateFrom').value,end=document.getElementById('dateTo').value;if(!validDate(start)||!validDate(end)||start>end){const notice=document.getElementById('notice');notice.style.display='block';notice.textContent='اختار فترة صحيحة: تاريخ البداية لازم يكون قبل أو مساوي لتاريخ النهاية.';return}selectedRange={start,end};customDateActive=true;const u=new URL(location.href);u.searchParams.set('from',start);u.searchParams.set('to',end);history.replaceState({},'',u);updatePeriodText();loadAll()});
-  document.getElementById('resetDate').addEventListener('click',()=>{selectedRange={start:CAMPAIGN_START,end:localISODate()};customDateActive=false;document.getElementById('dateFrom').value=selectedRange.start;document.getElementById('dateTo').value=selectedRange.end;const u=new URL(location.href);u.searchParams.delete('from');u.searchParams.delete('to');history.replaceState({},'',u.pathname+u.search+u.hash);updatePeriodText();loadAll()});
+  document.getElementById('resetDate').addEventListener('click',()=>{selectedRange={start:CAMPAIGN_START,end:localISODate()};customDateActive=true;document.getElementById('dateFrom').value=selectedRange.start;document.getElementById('dateTo').value=selectedRange.end;const u=new URL(location.href);u.searchParams.delete('from');u.searchParams.delete('to');history.replaceState({},'',u.pathname+u.search+u.hash);updatePeriodText();loadAll()});
   refreshTagControls();updatePeriodText();
 }
 
-function apiUrl(){if(!customDateActive)return'/api/data';return`/api/data?start_date=${encodeURIComponent(selectedRange.start)}&end_date=${encodeURIComponent(selectedRange.end)}`}
+function apiUrl(){return`/api/data?start_date=${encodeURIComponent(selectedRange.start)}&end_date=${encodeURIComponent(selectedRange.end)}`}
 function renderPayload(p){
   const notice=document.getElementById('notice');notice.style.display='none';const good=[],bad=[],stale=[];
   for(const name of order){const s=p.sources?.[name];if(s?.ok){try{good.push(parse(name,s.data,selectedTag));if(s.stale)stale.push(name)}catch(e){bad.push([name,e.message])}}else bad.push([name,s?.error||'No data'])}
