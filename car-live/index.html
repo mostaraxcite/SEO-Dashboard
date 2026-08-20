@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>لوحة أداء حملة السيارات | دهانات الجزيرة</title>
-  <meta name="description" content="لوحة الأداء المباشرة لحملة السيارات BMW لدهانات الجزيرة">
+  <title>لوحة الأداء التسويقي | دهانات الجزيرة</title>
+  <meta name="description" content="لوحة الأداء الرقمية لجميع حملات دهانات الجزيرة عبر المنصات الإعلانية">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
@@ -15,8 +15,8 @@
       <div class="brand">
         <img src="/jazeera-logo.png" alt="دهانات الجزيرة">
         <div class="brand-copy">
-          <b>لوحة أداء حملة السيارات</b>
-          <small>Marketing Performance Dashboard</small>
+          <b>لوحة الأداء التسويقي</b>
+          <small>All Campaigns Performance Dashboard</small>
         </div>
       </div>
       <div class="live">Supermetrics Live</div>
@@ -24,9 +24,9 @@
 
     <header>
       <div>
-        <div class="eyebrow">تقرير أداء الحملة</div>
-        <h1>لوحة قيادة حملة السيارات</h1>
-        <div class="period">الفترة: <span class="num">09 أغسطس 2026</span> — <span class="num">حتى اليوم</span> · تحديث تلقائي كل 5 دقائق</div>
+        <div class="eyebrow">Digital Marketing Performance</div>
+        <h1>لوحة أداء الحملات الرقمية</h1>
+        <div class="period">جميع الحملات · جميع المنصات</div>
       </div>
       <div class="badge">
         <div class="lbl">حالة البيانات</div>
@@ -38,17 +38,17 @@
     <div class="notice" id="notice"></div>
 
     <div class="cluster-head">
-      <h2>مؤشرات كفاءة الحملة</h2>
-      <span>— كفاءة التفاعل والتكلفة حسب البيانات الفعلية</span>
+      <h2>مؤشرات كفاءة الحملات</h2>
+      <span>— مؤشرات مشتقة تساعد على مقارنة الأداء</span>
     </div>
 
     <div class="gauges" id="gauges"></div>
 
     <div class="kpis">
-      <div class="kpi spend"><div class="lbl">الإنفاق الإعلاني المدفوع</div><div class="val num" id="kSpend">—</div></div>
-      <div class="kpi"><div class="lbl">مرات الظهور</div><div class="val num" id="kImp">—</div></div>
-      <div class="kpi"><div class="lbl">النقرات / الإجراءات</div><div class="val num" id="kClicks">—</div></div>
-      <div class="kpi"><div class="lbl">المنصات التي ترسل Reach</div><div class="val num" id="kCpm">—</div></div>
+      <div class="kpi spend"><div class="lbl">إجمالي الإنفاق الإعلاني</div><div class="val num" id="kSpend">—</div></div>
+      <div class="kpi"><div class="lbl">إجمالي مرات الظهور</div><div class="val num" id="kImp">—</div></div>
+      <div class="kpi"><div class="lbl">إجمالي النقرات / الإجراءات</div><div class="val num" id="kClicks">—</div></div>
+      <div class="kpi"><div class="lbl">عدد الحملات المرصودة</div><div class="val num" id="kCpm">—</div></div>
       <div class="kpi"><div class="lbl">عدد المنصات النشطة</div><div class="val num" id="kPlatforms">—</div></div>
       <div class="kpi"><div class="lbl">متوسط تكلفة الإجراء</div><div class="val num" id="kCpc">—</div></div>
       <div class="kpi green"><div class="lbl">إجمالي Reach المتاح</div><div class="val num" id="kReach">—</div></div>
@@ -57,117 +57,33 @@
 
     <div class="two-col">
       <section class="panel">
-        <div class="panel-head"><h2>الإعلانات المدفوعة — حسب المنصة</h2><div class="note">مقارنة مباشرة للأداء والكفاءة بين المنصات</div></div>
+        <div class="panel-head"><h2>الأداء حسب المنصة</h2><div class="note">مقارنة الإنفاق، الظهور، التفاعل والكفاءة</div></div>
         <table>
-          <thead><tr><th>المنصة</th><th class="n">الإنفاق</th><th class="n">الظهور</th><th class="n">النقرات</th><th class="n">CTR</th><th class="n">CPC</th></tr></thead>
+          <thead><tr><th>المنصة</th><th class="n">الإنفاق</th><th class="n">الظهور</th><th class="n">النقرات / الإجراءات</th><th class="n">CTR</th><th class="n">Cost / Action</th></tr></thead>
           <tbody id="paidRows"></tbody>
         </table>
       </section>
 
       <section class="panel">
-        <div class="panel-head"><h2>توزيع الإنفاق حسب المنصة</h2><div class="note">يوضح تركّز الميزانية وليس تكرار أرقام الجدول</div></div>
+        <div class="panel-head"><h2>توزيع الإنفاق حسب المنصة</h2><div class="note">يوضح أين تتركز الميزانية الحالية</div></div>
         <div id="bars"></div>
       </section>
     </div>
 
     <section class="panel">
-      <div class="panel-head"><h2>تفاصيل إضافية حسب المنصة</h2><div class="note">حقول إضافية غير مكررة من جدول الأداء أعلاه · Reach ليس Unique Cross-platform.</div></div>
+      <div class="panel-head"><h2>تغطية الحملات حسب المنصة</h2><div class="note">تُعرض أسماء الحملات الموجودة فعليًا في بيانات Supermetrics لكل منصة</div></div>
       <table class="detail">
-        <thead><tr><th>Platform</th><th>Campaign</th><th class="n">Spend SAR</th><th class="n">Reach</th><th>Primary action</th><th class="n">CPM USD</th></tr></thead>
+        <thead><tr><th>Platform</th><th>Campaigns Detected</th><th class="n">Campaign Count</th><th class="n">Spend SAR</th><th class="n">Reach</th><th>Primary Action</th><th class="n">CPM USD</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </section>
 
     <footer>
-      البيانات تُسحب مباشرة من Supermetrics عبر Vercel · Meta · Snapchat · TikTok · Google · Pinterest · X<br>
-      Google Directions غير مدرج في هذه اللوحة.
+      البيانات تُسحب من Supermetrics عبر Vercel · Meta · Snapchat · TikTok · Google · Pinterest · X<br>
+      الوضع الافتراضي: جميع الحملات من بداية السنة حتى اليوم.
     </footer>
   </div>
 
-  <script>
-    // Keep the Arabic interface RTL while always rendering locale-formatted dates and numbers with Western/English numerals.
-    (() => {
-      const englishLocale = locale => locale === 'ar-SA' ? 'en-US' : locale;
-      const dateLocaleString = Date.prototype.toLocaleString;
-      const dateLocaleDateString = Date.prototype.toLocaleDateString;
-      const numberLocaleString = Number.prototype.toLocaleString;
-
-      Date.prototype.toLocaleString = function(locale, options) {
-        return dateLocaleString.call(this, englishLocale(locale), options);
-      };
-      Date.prototype.toLocaleDateString = function(locale, options) {
-        return dateLocaleDateString.call(this, englishLocale(locale), options);
-      };
-      Number.prototype.toLocaleString = function(locale, options) {
-        return numberLocaleString.call(this, englishLocale(locale), options);
-      };
-    })();
-  </script>
   <script src="/app.js"></script>
-  <script>
-    // Replace duplicated headline totals with distinct, decision-useful efficiency insights.
-    (() => {
-      const baseRenderPayload = renderPayload;
-
-      const insightCard = (label, value, sub, accent = '#078dcc') => `
-        <div class="gauge" style="padding:22px 14px 24px">
-          <div style="height:4px;position:absolute;top:0;right:0;left:0;background:${accent}"></div>
-          <div class="gname">${label}</div>
-          <div class="gvalue num" style="margin-top:18px">${value}</div>
-          <div class="gsub" style="margin-top:8px;line-height:1.6">${sub}</div>
-        </div>`;
-
-      renderPayload = function(p) {
-        baseRenderPayload(p);
-
-        const good = [];
-        const failed = [];
-        for (const name of order) {
-          const s = p.sources?.[name];
-          if (!s?.ok) {
-            failed.push(name);
-            continue;
-          }
-          try {
-            good.push(parse(name, s.data, selectedTag));
-          } catch (_) {
-            failed.push(name);
-          }
-        }
-
-        const spend = good.reduce((a, d) => a + d.spend, 0);
-        const imp = good.reduce((a, d) => a + d.ims, 0);
-        const clicks = good.reduce((a, d) => a + d.acts, 0);
-        const blendedCtr = imp ? (clicks / imp) * 100 : NaN;
-        const blendedCpm = imp ? (spend / imp) * 1000 : NaN;
-        const reachPlatforms = good.filter(d => Number.isFinite(d.reach) && d.reach > 0).length;
-        const validCpa = good.filter(d => Number.isFinite(d.cpa) && d.acts > 0).sort((a, b) => a.cpa - b.cpa);
-        const validCtr = good.filter(d => Number.isFinite(d.ctr) && d.ims > 0).sort((a, b) => b.ctr - a.ctr);
-        const bestCpa = validCpa[0];
-        const bestCtr = validCtr[0];
-
-        document.getElementById('badgeSpend').textContent = failed.length ? 'PARTIAL' : 'LIVE';
-        document.getElementById('kCpm').textContent = `${f(reachPlatforms)} / ${f(good.length)}`;
-
-        document.getElementById('gauges').innerHTML = [
-          insightCard('Blended CTR', `${f(blendedCtr, 2)}%`, 'Clicks / Impressions', '#078dcc'),
-          insightCard('Blended CPM', `$${f(blendedCpm, 2)}`, Number.isFinite(blendedCpm) ? `Benchmark: $${CPM_BENCHMARK.toFixed(2)}` : 'Benchmark unavailable', '#0f1728'),
-          insightCard('أفضل تكلفة / إجراء', bestCpa ? `$${f(bestCpa.cpa, 2)}` : '—', bestCpa ? `${bestCpa.platform} · Lowest CPA` : 'No action data', '#12b76a'),
-          insightCard('أفضل CTR', bestCtr ? `${f(bestCtr.ctr, 2)}%` : '—', bestCtr ? `${bestCtr.platform} · Highest CTR` : 'No impression data', '#f59e0b')
-        ].join('');
-
-        document.getElementById('rows').innerHTML = good.map(d => `
-          <tr>
-            <td><b>${d.platform}</b></td>
-            <td>${d.campaign}</td>
-            <td class="n">${f(d.spend * 3.75, 2)}</td>
-            <td class="n">${f(d.reach)}</td>
-            <td>${d.action}</td>
-            <td class="n">$${f(d.cpm, 3)}</td>
-          </tr>`).join('') + failed.map(name => `
-          <tr><td><b>${name}</b></td><td colspan="5" class="err">No matching data</td></tr>`).join('');
-      };
-    })();
-  </script>
 </body>
 </html>
