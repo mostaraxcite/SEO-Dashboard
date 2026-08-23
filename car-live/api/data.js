@@ -23,6 +23,26 @@ function sourceConfig(allUrl,standardUrl){
   return {url:null,scope:'missing'};
 }
 
+function normalizeLinkedInPayload(payload){
+  const candidates=[
+    payload,
+    payload?.data,
+    payload?.data?.data,
+    payload?.results,
+    payload?.result?.data
+  ];
+
+  for(const table of candidates){
+    if(!Array.isArray(table)||!table.length||!Array.isArray(table[0])) continue;
+    table[0]=table[0].map(cell=>{
+      const label=String(cell??'').trim().toLowerCase();
+      return label==='campaign group name'?'Campaign name':cell;
+    });
+    break;
+  }
+  return payload;
+}
+
 export default async function handler(req,res){
   const range=getDateRange(req);
   if(range.error){
@@ -50,7 +70,9 @@ export default async function handler(req,res){
       const r=await fetch(url,{cache:'no-store'});
       const text=await r.text();
       if(!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,200)}`);
-      out[name]={ok:true,data:JSON.parse(text),refreshMode:'30min',queryScope:cfg.scope};
+      let data=JSON.parse(text);
+      if(name==='LinkedIn') data=normalizeLinkedInPayload(data);
+      out[name]={ok:true,data,refreshMode:'30min',queryScope:cfg.scope};
     }catch(e){
       out[name]={ok:false,error:String(e?.message||e),refreshMode:'30min',queryScope:cfg.scope};
     }
