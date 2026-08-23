@@ -5,13 +5,39 @@ const baseParse=parse;
 parse=function(platform,p,tag=selectedTag){
   if(platform==='LinkedIn'){
     const t=table(p);
-    if(Array.isArray(t)&&t.length&&Array.isArray(t[0])){
+    if(Array.isArray(t)&&t.length>1&&Array.isArray(t[0])){
       const cloned=t.map(row=>Array.isArray(row)?row.slice():row);
       const headers=cloned[0].map(v=>String(v??''));
       const normalized=headers.map(norm);
-      const campaignIndex=normalized.findIndex(v=>v==='campaign name'||v==='campaign');
+      let campaignIndex=normalized.findIndex(v=>v==='campaign name'||v==='campaign');
       const groupIndex=normalized.findIndex(v=>v.includes('campaign group name'));
-      if(campaignIndex<0&&groupIndex>=0) cloned[0][groupIndex]='Campaign name';
+      if(campaignIndex<0&&groupIndex>=0){
+        cloned[0][groupIndex]='Campaign name';
+        campaignIndex=groupIndex;
+      }
+
+      // Sealtec fallback: Supermetrics LinkedIn responses may rename/move the campaign-group field.
+      // If any row contains sealtec/sealtic anywhere, build a normalized mini-table from those rows.
+      if(tag==='sealtec'){
+        let matchedRows=[];
+        if(campaignIndex>=0){
+          matchedRows=cloned.slice(1).filter(r=>/sealtec|sealtic/i.test(String(r?.[campaignIndex]??'')));
+        }
+        if(!matchedRows.length){
+          matchedRows=cloned.slice(1).filter(r=>Array.isArray(r)&&r.some(cell=>/sealtec|sealtic/i.test(String(cell??''))));
+        }
+        if(matchedRows.length){
+          // Ensure base parser sees a campaign-name column. If we still don't know which column it is,
+          // detect the first column containing the matched campaign text.
+          if(campaignIndex<0){
+            campaignIndex=matchedRows[0].findIndex(cell=>/sealtec|sealtic/i.test(String(cell??'')));
+            if(campaignIndex>=0) cloned[0][campaignIndex]='Campaign name';
+          }
+          const mini=[cloned[0],...matchedRows];
+          return baseParse(platform,mini,tag);
+        }
+      }
+
       return baseParse(platform,cloned,tag);
     }
   }
@@ -34,18 +60,9 @@ renderPayload=function(p){
     if(!Array.isArray(t)||t.length<2||!Array.isArray(t[0])){
       diagnostic=`LinkedIn عبر ${s.sourceEnv||'SM_LINKEDIN_URL'}: الداتا وصلت لكن بدون صفوف جدول.`;
     }else{
-      const headers=t[0].map(v=>String(v??''));
-      const nh=headers.map(norm);
-      let ci=nh.findIndex(v=>v==='campaign name'||v==='campaign');
-      if(ci<0) ci=nh.findIndex(v=>v.includes('campaign group name'));
-      if(ci<0){
-        diagnostic=`LinkedIn عبر ${s.sourceEnv||'SM_LINKEDIN_URL'}: الداتا وصلت لكن لا يوجد Campaign name أو Campaign group name.`;
-      }else{
-        const names=t.slice(1).map(r=>String(r?.[ci]??'').trim()).filter(Boolean);
-        const matched=names.filter(name=>/sealtec|sealtic/i.test(name));
-        if(!matched.length){
-          diagnostic=`LinkedIn عبر ${s.sourceEnv||'SM_LINKEDIN_URL'}: الداتا وصلت ولكن أسماء الحملات المستلمة لا تطابق Sealtec. المستلم: ${names.slice(0,8).join(' | ')||'لا توجد أسماء'}`;
-        }
+      const found=t.slice(1).some(r=>Array.isArray(r)&&r.some(cell=>/sealtec|sealtic/i.test(String(cell??''))));
+      if(!found){
+        diagnostic=`LinkedIn عبر ${s.sourceEnv||'SM_LINKEDIN_URL'}: الداتا وصلت لكن لا يوجد أي صف يحتوي Sealtec/Sealtic.`;
       }
     }
   }
@@ -60,5 +77,4 @@ renderPayload=function(p){
   }
 };
 
-// If app.js finished its first fetch unusually fast, force one render with the patched parser/diagnostics.
 setTimeout(()=>{try{if(lastPayload) renderPayload(lastPayload);}catch(_){}},0);
