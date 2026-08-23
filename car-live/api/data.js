@@ -17,26 +17,19 @@ function withDateRange(rawUrl,range){
   return u.toString();
 }
 
-function sourceConfig(allUrl,standardUrl){
-  if(allUrl) return {url:allUrl,scope:'all-campaigns'};
-  if(standardUrl) return {url:standardUrl,scope:'all-campaigns'};
-  return {url:null,scope:'missing'};
+function sourceConfig(standardUrl,allUrl,standardName,allName){
+  if(standardUrl) return {url:standardUrl,scope:'all-campaigns',sourceEnv:standardName};
+  if(allUrl) return {url:allUrl,scope:'all-campaigns',sourceEnv:allName};
+  return {url:null,scope:'missing',sourceEnv:'missing'};
 }
 
 function normalizeLinkedInPayload(payload){
-  const candidates=[
-    payload,
-    payload?.data,
-    payload?.data?.data,
-    payload?.results,
-    payload?.result?.data
-  ];
-
+  const candidates=[payload,payload?.data,payload?.data?.data,payload?.results,payload?.result?.data];
   for(const table of candidates){
     if(!Array.isArray(table)||!table.length||!Array.isArray(table[0])) continue;
     table[0]=table[0].map(cell=>{
       const label=String(cell??'').trim().toLowerCase();
-      return label==='campaign group name'?'Campaign name':cell;
+      return label.includes('campaign group name')?'Campaign name':cell;
     });
     break;
   }
@@ -45,36 +38,32 @@ function normalizeLinkedInPayload(payload){
 
 export default async function handler(req,res){
   const range=getDateRange(req);
-  if(range.error){
-    res.status(400).json({error:range.error});
-    return;
-  }
+  if(range.error){res.status(400).json({error:range.error});return;}
 
   const liveSources={
-    Meta:sourceConfig(process.env.SM_META_ALL_URL,process.env.SM_META_URL),
-    Google:sourceConfig(process.env.SM_GOOGLE_ALL_URL,process.env.SM_GOOGLE_URL),
-    Snapchat:sourceConfig(process.env.SM_SNAPCHAT_ALL_URL,process.env.SM_SNAPCHAT_URL),
-    TikTok:sourceConfig(process.env.SM_TIKTOK_ALL_URL,process.env.SM_TIKTOK_URL),
-    LinkedIn:sourceConfig(process.env.SM_LINKEDIN_ALL_URL,process.env.SM_LINKEDIN_URL)
+    Meta:sourceConfig(process.env.SM_META_URL,process.env.SM_META_ALL_URL,'SM_META_URL','SM_META_ALL_URL'),
+    Google:sourceConfig(process.env.SM_GOOGLE_URL,process.env.SM_GOOGLE_ALL_URL,'SM_GOOGLE_URL','SM_GOOGLE_ALL_URL'),
+    Snapchat:sourceConfig(process.env.SM_SNAPCHAT_URL,process.env.SM_SNAPCHAT_ALL_URL,'SM_SNAPCHAT_URL','SM_SNAPCHAT_ALL_URL'),
+    TikTok:sourceConfig(process.env.SM_TIKTOK_URL,process.env.SM_TIKTOK_ALL_URL,'SM_TIKTOK_URL','SM_TIKTOK_ALL_URL'),
+    LinkedIn:sourceConfig(process.env.SM_LINKEDIN_URL,process.env.SM_LINKEDIN_ALL_URL,'SM_LINKEDIN_URL','SM_LINKEDIN_ALL_URL')
   };
 
   const out={};
-
   await Promise.all(Object.entries(liveSources).map(async([name,cfg])=>{
     if(!cfg.url){
-      out[name]={ok:false,error:'Missing Supermetrics URL',refreshMode:'30min',queryScope:cfg.scope};
+      out[name]={ok:false,error:'Missing Supermetrics URL',refreshMode:'30min',queryScope:cfg.scope,sourceEnv:cfg.sourceEnv};
       return;
     }
     try{
       const url=withDateRange(cfg.url,range);
       const r=await fetch(url,{cache:'no-store'});
       const text=await r.text();
-      if(!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,200)}`);
+      if(!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,240)}`);
       let data=JSON.parse(text);
       if(name==='LinkedIn') data=normalizeLinkedInPayload(data);
-      out[name]={ok:true,data,refreshMode:'30min',queryScope:cfg.scope};
+      out[name]={ok:true,data,refreshMode:'30min',queryScope:cfg.scope,sourceEnv:cfg.sourceEnv};
     }catch(e){
-      out[name]={ok:false,error:String(e?.message||e),refreshMode:'30min',queryScope:cfg.scope};
+      out[name]={ok:false,error:String(e?.message||e),refreshMode:'30min',queryScope:cfg.scope,sourceEnv:cfg.sourceEnv};
     }
   }));
 
