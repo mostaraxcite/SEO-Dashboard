@@ -17,9 +17,12 @@ function getRange(req){
   if(!start&&!end) return {unit:'day',units:-1,unitReference:null,start:null,end:null,allTime:true};
   if(!DATE_RE.test(start)||!DATE_RE.test(end)||start>end) return {error:'Invalid date range'};
   const startMs=new Date(`${start}T00:00:00Z`).getTime();
-  const endMs=new Date(`${end}T23:59:59.999Z`).getTime();
+  const endMs=new Date(`${end}T23:59:59Z`).getTime();
   const units=Math.max(1,Math.ceil((endMs-startMs+1)/86400000));
-  return {unit:'day',units,unitReference:new Date(endMs).toISOString(),start,end,allTime:false};
+  // Bitly expects an ISO-8601 timestamp with an explicit numeric offset. URLSearchParams
+  // will encode + and : correctly, e.g. 2026-08-23T23%3A59%3A59%2B0000.
+  const unitReference=`${end}T23:59:59+0000`;
+  return {unit:'day',units,unitReference,start,end,allTime:false};
 }
 
 function metricQuery(range,size){
@@ -33,13 +36,15 @@ function safeBitlinkPath(id){return String(id||'').split('/').map(encodeURICompo
 function linkText(link){return norm([link?.id,link?.link,link?.title,link?.long_url,...(link?.tags||[])].filter(Boolean).join(' '));}
 
 function campaignPatterns(campaign){
-  const built=BUILTIN_PATTERNS[campaign]||[];
+  const raw=String(campaign||'');
+  const direct=raw.split(/[|,]/).map(v=>norm(v)).filter(Boolean);
+  const built=BUILTIN_PATTERNS[raw]||[];
   let extra=[];
   try{
     const cfg=JSON.parse(process.env.BITLY_CAMPAIGN_PATTERNS||'{}');
-    if(Array.isArray(cfg?.[campaign])) extra=cfg[campaign];
+    if(Array.isArray(cfg?.[raw])) extra=cfg[raw];
   }catch(_){}
-  return uniq([campaign,...built,...extra]);
+  return uniq([...direct,...built,...extra]);
 }
 
 function matchesCampaign(link,campaign){
@@ -237,7 +242,8 @@ export default async function handler(req,res){
       updatedAt:new Date().toISOString(),
       diagnostics:{
         concurrency:MAX_CONCURRENCY,
-        note:'Bitly metric calls are concurrency-limited to stay below Bitly per-IP limits.'
+        unit_reference:range.unitReference,
+        note:'Bitly metric calls are concurrency-limited and use an explicit +0000 ISO offset.'
       }
     });
   }catch(e){
