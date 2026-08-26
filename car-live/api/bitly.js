@@ -19,8 +19,6 @@ function getRange(req){
   const startMs=new Date(`${start}T00:00:00Z`).getTime();
   const endMs=new Date(`${end}T23:59:59Z`).getTime();
   const units=Math.max(1,Math.ceil((endMs-startMs+1)/86400000));
-  // Bitly expects an ISO-8601 timestamp with an explicit numeric offset. URLSearchParams
-  // will encode + and : correctly, e.g. 2026-08-23T23%3A59%3A59%2B0000.
   const unitReference=`${end}T23:59:59+0000`;
   return {unit:'day',units,unitReference,start,end,allTime:false};
 }
@@ -109,19 +107,39 @@ async function mapLimit(items,limit,worker){
   return out;
 }
 
-async function getClickSummary(id,range,token){
+async function getEngagementSummary(id,range,token){
   const qs=metricQuery(range);
   try{
-    const summary=await bitlyFetch(`/bitlinks/${id}/clicks/summary?${qs}`,token);
-    return {clicks:Number(summary?.total_clicks||0),source:'clicks/summary',error:null};
+    const data=await bitlyFetch(`/bitlinks/${id}/engagements/summary?${qs}`,token);
+    const breakdown=data?.engagements||{};
+    const total=Number(data?.total_engagements||0);
+    return {
+      totalEngagements:total,
+      linkClicks:Number(breakdown?.clicks||0),
+      scans:Number(breakdown?.scans||0),
+      libButtonClicks:Number(breakdown?.lib_button_clicks||0),
+      source:'engagements/summary',
+      error:null
+    };
   }catch(primaryError){
     try{
-      const engagement=await bitlyFetch(`/bitlinks/${id}/engagements/summary?${qs}`,token);
-      const clicks=Number(engagement?.engagements?.clicks ?? engagement?.total_engagements ?? 0);
-      return {clicks,source:'engagements/summary',error:null,fallbackFrom:String(primaryError?.message||primaryError)};
+      const clicks=await bitlyFetch(`/bitlinks/${id}/clicks/summary?${qs}`,token);
+      const count=Number(clicks?.total_clicks||0);
+      return {
+        totalEngagements:count,
+        linkClicks:count,
+        scans:0,
+        libButtonClicks:0,
+        source:'clicks/summary',
+        error:null,
+        fallbackFrom:String(primaryError?.message||primaryError)
+      };
     }catch(fallbackError){
       return {
-        clicks:null,
+        totalEngagements:null,
+        linkClicks:null,
+        scans:null,
+        libButtonClicks:null,
         source:null,
         error:String(fallbackError?.message||fallbackError),
         primaryError:String(primaryError?.message||primaryError),
@@ -154,9 +172,9 @@ async function getCities(id,range,token){
 
 async function getLinkMetrics(link,range,token){
   const id=safeBitlinkPath(link.id||link.link);
-  const summary=await getClickSummary(id,range,token);
+  const summary=await getEngagementSummary(id,range,token);
   let city={cities:[],otherCityClicks:0,noCityClicks:0,error:null};
-  if(Number(summary.clicks)>0){
+  if(Number(summary.linkClicks)>0){
     city=await getCities(id,range,token);
   }
   return {
@@ -168,7 +186,16 @@ async function getLinkMetrics(link,range,token){
     group:link.group_name||'',
     groupGuid:link.group_guid||'',
     createdAt:link.created_at||'',
-    clicks:summary.clicks,
+
+    // Backward compatibility: the existing dashboard reads `clicks` as its main
+    // number. Bitly's web app now labels that card as Engagements, so `clicks`
+    // intentionally carries total_engagements for display parity with Bitly.
+    clicks:summary.totalEngagements,
+    engagements:summary.totalEngagements,
+    linkClicks:summary.linkClicks,
+    scans:summary.scans,
+    libButtonClicks:summary.libButtonClicks,
+
     clickMetricSource:summary.source,
     clickError:summary.error,
     clickErrorStatus:summary.status||null,
@@ -210,11 +237,12 @@ export default async function handler(req,res){
     }
 
     const cities=[...cityMap.values()].sort((a,b)=>b.clicks-a.clicks);
-    const linksWithMetrics=links.filter(l=>Number.isFinite(l.clicks));
+    const linksWithMetrics=links.filter(l=>Number.isFinite(l.engagements));
     const metricErrors=links.filter(l=>l.clickError);
-    const totalClicks=linksWithMetrics.reduce((s,l)=>s+Number(l.clicks||0),0);
-    const sorted=[...links].sort((a,b)=>(Number(b.clicks)||0)-(Number(a.clicks)||0));
-    const cityMetricsAvailable=links.some(l=>l.cityMetricsAvailable&&Number(l.clicks)>0);
+    const totalEngagements=linksWithMetrics.reduce((s,l)=>s+Number(l.engagements||0),0);
+    const totalLinkClicks=linksWithMetrics.reduce((s,l)=>s+Number(l.linkClicks||0),0);
+    const sorted=[...links].sort((a,b)=>(Number(b.engagements)||0)-(Number(a.engagements)||0));
+    const cityMetricsAvailable=links.some(l=>l.cityMetricsAvailable&&Number(l.linkClicks)>0);
     const clickMetricsAvailable=linksWithMetrics.length>0;
     const groupsOut=groups.map(g=>({guid:g.guid,name:g.name||''}));
 
@@ -228,13 +256,19 @@ export default async function handler(req,res){
       matchedLinks:matchedAll.length,
       returnedLinks:links.length,
       requestedLimit,
-      totalClicks,
+
+      // Compatibility with current UI plus explicit new fields.
+      totalClicks:totalEngagements,
+      totalEngagements,
+      totalLinkClicks,
       clickMetricsAvailable,
+      engagementMetricsAvailable:clickMetricsAvailable,
+
       metricErrors:metricErrors.slice(0,5).map(l=>({
         id:l.id,title:l.title,error:l.clickError,status:l.clickErrorStatus
       })),
       metricErrorCount:metricErrors.length,
-      topLink:sorted.find(l=>Number(l.clicks)>0)||sorted[0]||null,
+      topLink:sorted.find(l=>Number(l.engagements)>0)||sorted[0]||null,
       topCity:cities[0]||null,
       cities,
       cityMetricsAvailable,
@@ -243,7 +277,8 @@ export default async function handler(req,res){
       diagnostics:{
         concurrency:MAX_CONCURRENCY,
         unit_reference:range.unitReference,
-        note:'Bitly metric calls are concurrency-limited and use an explicit +0000 ISO offset.'
+        primary_metric:'engagements/summary',
+        note:'Displayed Bitly totals use total_engagements to match the Bitly web app. City metrics remain click-based.'
       }
     });
   }catch(e){
