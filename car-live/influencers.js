@@ -5,6 +5,7 @@
   const pct=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const safeUrl=v=>{try{const u=new URL(String(v));return /^https?:$/.test(u.protocol)?u.href:'#';}catch(_){return '#';}};
   const val=(v,fmt=NF)=>Number.isFinite(v)?fmt.format(v):'—';
   const sar=v=>Number.isFinite(v)?`${money.format(v)} ر.س`:'—';
   const rate=v=>Number.isFinite(v)?`${moneyRate.format(v)} ر.س`:'—';
@@ -38,7 +39,10 @@
       .influencers-table .i-num{font-family:JetBrains Mono,Tajawal,sans-serif;text-align:left;direction:ltr;font-weight:800;white-space:nowrap}
       .influencer-name{font-weight:900;color:#101828;white-space:nowrap}
       .platform-chips{display:flex;gap:5px;flex-wrap:wrap}
-      .platform-chip{display:inline-flex;border-radius:999px;padding:3px 7px;background:#f2f4f7;color:#344054;font-size:10px;font-weight:800}
+      .platform-chip{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;background:#f2f4f7;color:#344054;font-size:10px;font-weight:800;text-decoration:none;border:1px solid transparent}
+      .platform-link{cursor:pointer;transition:.15s ease}
+      .platform-link:hover{background:#e8f5fb;color:#078dcc;border-color:#b9e3f5;transform:translateY(-1px)}
+      .platform-link:after{content:' ↗';font-size:9px;margin-right:3px}
       .metric-unavailable{color:#98a2b3;font-weight:600}
       .influencers-loading,.influencers-error{padding:18px;border-radius:11px;background:#f8fafc;color:#667085;font-size:12px;line-height:1.8}
       .influencers-error{background:#fff5f5;color:#b42318}
@@ -79,9 +83,23 @@
   }
 
   function platformsHtml(item){
-    const platforms=[...new Set((item.posts||[]).map(p=>platformLabel(p.platform)))];
-    if(!platforms.length) return `<span class="platform-chip">${esc(item.platform||'—')}</span>`;
-    return `<div class="platform-chips">${platforms.map(p=>`<span class="platform-chip">${esc(p)}</span>`).join('')}</div>`;
+    const posts=(item.posts||[]).filter(p=>p?.platform&&p?.url);
+    if(!posts.length) return `<span class="platform-chip">${esc(item.platform||'—')}</span>`;
+
+    const unique=[];
+    const seen=new Set();
+    for(const post of posts){
+      const key=String(post.platform).toLowerCase();
+      if(seen.has(key)) continue;
+      seen.add(key);
+      unique.push(post);
+    }
+
+    return `<div class="platform-chips">${unique.map(post=>{
+      const href=safeUrl(post.url);
+      const label=platformLabel(post.platform);
+      return `<a class="platform-chip platform-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="فتح فيديو ${esc(label)}">${esc(label)}</a>`;
+    }).join('')}</div>`;
   }
 
   function numCell(v){
@@ -126,7 +144,7 @@
     body.innerHTML=`
       ${summary}
       <div class="influencers-toolbar">
-        <div class="i-note">التكلفة حسب ملف المؤثرين المرفق.</div>
+        <div class="i-note">التكلفة حسب ملف المؤثرين المرفق. اضغط على المنصة لفتح فيديو المؤثر عند توفر الرابط.</div>
         <button type="button" class="influencers-refresh" id="influencersRefresh">تحديث المؤثرين</button>
       </div>
       <div class="influencers-table-wrap">
