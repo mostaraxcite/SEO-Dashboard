@@ -1,6 +1,6 @@
 const SOCIALKIT_API='https://api.socialkit.dev';
-const FETCH_TIMEOUT_MS=7000;
-const MAX_CONCURRENCY=3;
+const FETCH_TIMEOUT_MS=3500;
+const MAX_CONCURRENCY=8;
 
 const INFLUENCERS=[
   {id:'raid-abdulmosen',name:'RAID ABDULMOSEN',cost:13000,platform:'سناب + تيك توك + انستقرام',urls:[
@@ -193,7 +193,9 @@ async function getUrlStats(url,key){
     try{
       const d=await socialKit(url,key);
       if(d) return {platform,clicks:null,...d};
-    }catch(_){}
+    }catch(e){
+      return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,clicks:null,available:false,error:String(e?.message||e)};
+    }
   }
 
   try{
