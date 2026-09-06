@@ -17,7 +17,6 @@ parse=function(platform,p,tag=selectedTag){
       }
 
       // Sealtec fallback: Supermetrics LinkedIn responses may rename/move the campaign-group field.
-      // If any row contains sealtec/sealtic anywhere, build a normalized mini-table from those rows.
       if(tag==='sealtec'){
         let matchedRows=[];
         if(campaignIndex>=0){
@@ -27,8 +26,6 @@ parse=function(platform,p,tag=selectedTag){
           matchedRows=cloned.slice(1).filter(r=>Array.isArray(r)&&r.some(cell=>/sealtec|sealtic/i.test(String(cell??''))));
         }
         if(matchedRows.length){
-          // Ensure base parser sees a campaign-name column. If we still don't know which column it is,
-          // detect the first column containing the matched campaign text.
           if(campaignIndex<0){
             campaignIndex=matchedRows[0].findIndex(cell=>/sealtec|sealtic/i.test(String(cell??'')));
             if(campaignIndex>=0) cloned[0][campaignIndex]='Campaign name';
@@ -44,9 +41,33 @@ parse=function(platform,p,tag=selectedTag){
   return baseParse(platform,p,tag);
 };
 
+function hideUnavailablePlatforms(){
+  // Do not expose technical/API errors as platform rows. If a platform has no
+  // usable campaign data for the selected view, it simply does not appear.
+  ['paidRows','rows'].forEach(id=>{
+    const tbody=document.getElementById(id);
+    if(!tbody) return;
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      if(tr.querySelector('.err')) tr.remove();
+    });
+  });
+
+  // Remove the generic missing-source warning from the visible notice while
+  // preserving other useful warnings such as stale/legacy data messages.
+  const notice=document.getElementById('notice');
+  if(notice){
+    let text=String(notice.textContent||'');
+    text=text.replace(/مصادر غير متاحة أو بدون بيانات مطابقة:\s*[^.]*\.\s*/g,'').trim();
+    notice.textContent=text;
+    if(!text) notice.style.display='none';
+  }
+}
+
 const baseRenderPayload=renderPayload;
 renderPayload=function(p){
   baseRenderPayload(p);
+  hideUnavailablePlatforms();
+
   if(selectedTag!=='sealtec') return;
 
   const s=p?.sources?.LinkedIn;
