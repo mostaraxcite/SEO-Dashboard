@@ -5,7 +5,6 @@
   const pct=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const safeUrl=v=>{try{const u=new URL(String(v));return /^https?:$/.test(u.protocol)?u.href:'#';}catch(_){return '#';}};
   const val=(v,fmt=NF)=>Number.isFinite(v)?fmt.format(v):'—';
   const sar=v=>Number.isFinite(v)?`${money.format(v)} ر.س`:'—';
   const rate=v=>Number.isFinite(v)?`${moneyRate.format(v)} ر.س`:'—';
@@ -23,7 +22,7 @@
       .influencers-panel{margin-top:22px}
       .influencers-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
       .influencers-source{font-size:11px;font-weight:800;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:999px;padding:6px 10px;direction:ltr}
-      .influencers-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+      .influencers-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
       .influencers-stat{border:1px solid #e5eaf1;border-radius:13px;padding:13px;background:#fbfcfe}
       .influencers-stat .i-label{font-size:11px;color:#667085;font-weight:700}
       .influencers-stat .i-value{font:800 21px/1.25 JetBrains Mono,Tajawal,sans-serif;margin-top:5px;color:#101828}
@@ -33,19 +32,14 @@
       .influencers-refresh{border:1px solid #d0d5dd;background:#fff;border-radius:9px;height:36px;padding:0 12px;font-family:Tajawal,sans-serif;font-weight:800;color:#344054;cursor:pointer}
       .influencers-refresh:disabled{opacity:.55;cursor:wait}
       .influencers-table-wrap{overflow:auto;border-top:1px solid #edf0f4}
-      .influencers-table{width:100%;min-width:1540px;border-collapse:collapse}
+      .influencers-table{width:100%;min-width:1180px;border-collapse:collapse}
       .influencers-table th,.influencers-table td{padding:11px 9px;border-bottom:1px solid #edf0f4;font-size:11px;text-align:right;vertical-align:top}
       .influencers-table th{font-size:10px;color:#667085;white-space:nowrap;background:#fcfcfd;position:sticky;top:0;z-index:1}
       .influencers-table .i-num{font-family:JetBrains Mono,Tajawal,sans-serif;text-align:left;direction:ltr;font-weight:800;white-space:nowrap}
       .influencer-name{font-weight:900;color:#101828;white-space:nowrap}
-      .platform-chips,.post-links{display:flex;gap:5px;flex-wrap:wrap}
+      .platform-chips{display:flex;gap:5px;flex-wrap:wrap}
       .platform-chip{display:inline-flex;border-radius:999px;padding:3px 7px;background:#f2f4f7;color:#344054;font-size:10px;font-weight:800}
-      .post-link{display:inline-flex;align-items:center;gap:4px;border:1px solid #dbe4ee;border-radius:8px;padding:4px 7px;color:#078dcc;text-decoration:none;font-size:10px;font-weight:800;direction:ltr}
-      .post-link.error{color:#b42318;border-color:#fecaca;background:#fff7f7}
-      .missing-link{font-size:10px;color:#b54708;background:#fffaeb;border:1px solid #fedf89;border-radius:8px;padding:4px 7px;display:inline-block}
       .metric-unavailable{color:#98a2b3;font-weight:600}
-      .click-unavailable{color:#b54708;font-size:10px;line-height:1.4;max-width:90px;display:inline-block}
-      .influencers-warning{margin:10px 0;padding:9px 11px;background:#fffaeb;border:1px solid #fedf89;border-radius:9px;color:#7a2e0e;font-size:11px;line-height:1.8}
       .influencers-loading,.influencers-error{padding:18px;border-radius:11px;background:#f8fafc;color:#667085;font-size:12px;line-height:1.8}
       .influencers-error{background:#fff5f5;color:#b42318}
       @media(max-width:900px){.influencers-summary{grid-template-columns:repeat(2,1fr)}}
@@ -84,15 +78,6 @@
     return root;
   }
 
-  function linksHtml(item){
-    if(item.missingLink) return '<span class="missing-link">الرابط غير مضاف في الملف</span>';
-    return `<div class="post-links">${(item.posts||[]).map((p,i)=>{
-      const cls=p.available?'post-link':'post-link error';
-      const title=p.available?`${platformLabel(p.platform)} ${i+1}`:`${platformLabel(p.platform)} · غير متاح`;
-      return `<a class="${cls}" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">${esc(title)} ↗</a>`;
-    }).join('')}</div>`;
-  }
-
   function platformsHtml(item){
     const platforms=[...new Set((item.posts||[]).map(p=>platformLabel(p.platform)))];
     if(!platforms.length) return `<span class="platform-chip">${esc(item.platform||'—')}</span>`;
@@ -107,11 +92,9 @@
     const body=document.getElementById('influencersBody');
     const note=document.getElementById('influencersNote');
     if(!body) return;
-    if(note) note.textContent=`${NF.format(data.creatorCount||0)} مؤثر · ${NF.format(data.postLinkCount||0)} رابط محتوى · آخر تحديث ${new Date(data.updatedAt).toLocaleString('ar-SA')}`;
+    if(note) note.textContent=`${NF.format(data.creatorCount||0)} مؤثر · آخر تحديث ${new Date(data.updatedAt).toLocaleString('ar-SA')}`;
 
     const t=data.totals||{};
-    const missing=(data.influencers||[]).filter(i=>i.missingLink).length;
-    const unavailable=(data.influencers||[]).filter(i=>!i.missingLink&&!i.metricsAvailable).length;
     const summary=`
       <div class="influencers-summary">
         <div class="influencers-stat"><div class="i-label">إجمالي تكلفة المؤثرين</div><div class="i-value">${sar(t.cost)}</div><div class="i-sub">${NF.format(data.creatorCount||0)} مؤثر</div></div>
@@ -120,22 +103,13 @@
         <div class="influencers-stat"><div class="i-label">معدل التفاعل</div><div class="i-value">${percent(t.engagementRate)}</div><div class="i-sub">التفاعل ÷ المشاهدات</div></div>
         <div class="influencers-stat"><div class="i-label">CPV تكلفة المشاهدة</div><div class="i-value">${rate(t.cpv)}</div><div class="i-sub">التكلفة ÷ المشاهدات</div></div>
         <div class="influencers-stat"><div class="i-label">CPE تكلفة التفاعل</div><div class="i-value">${rate(t.cpe)}</div><div class="i-sub">التكلفة ÷ إجمالي التفاعل</div></div>
-        <div class="influencers-stat"><div class="i-label">النقرات</div><div class="i-value">—</div><div class="i-sub">تحتاج رابط تتبع لكل مؤثر</div></div>
-        <div class="influencers-stat"><div class="i-label">تغطية الروابط</div><div class="i-value">${NF.format(data.creatorsWithLinks||0)} / ${NF.format(data.creatorCount||0)}</div><div class="i-sub">${NF.format(missing)} بدون رابط</div></div>
       </div>`;
-
-    const warning=`<div class="influencers-warning">
-      <b>ملاحظة القياس:</b> المشاهدات والتفاعل تُسحب من العدادات العامة المتاحة للمنشورات.
-      <b>النقرات ليست معلومة عامة</b> في روابط TikTok/Instagram/Snapchat؛ لعرض Clicks وCPC بدقة نحتاج رابط Bitly/UTM منفصل لكل مؤثر أو صلاحية Insights للحساب.
-      ${unavailable?` يوجد ${NF.format(unavailable)} مؤثر لديه رابط لكن المنصة لم تُظهر عداداته آليًا الآن.`:''}
-    </div>`;
 
     const rows=(data.influencers||[]).map(i=>{
       const m=i.metrics||{};
       return `<tr>
         <td><div class="influencer-name">${esc(i.name)}</div></td>
         <td>${platformsHtml(i)}</td>
-        <td>${linksHtml(i)}</td>
         <td class="i-num">${sar(i.cost)}</td>
         <td class="i-num">${numCell(m.views)}</td>
         <td class="i-num">${numCell(m.likes)}</td>
@@ -143,29 +117,25 @@
         <td class="i-num">${numCell(m.shares)}</td>
         <td class="i-num">${numCell(m.saves)}</td>
         <td class="i-num">${numCell(m.engagement)}</td>
-        <td><span class="click-unavailable">غير متاح من الرابط العام</span></td>
         <td class="i-num">${rate(i.cpv)}</td>
         <td class="i-num">${rate(i.cpe)}</td>
-        <td class="i-num">${rate(i.cpc)}</td>
       </tr>`;
     }).join('');
 
     body.className='';
     body.innerHTML=`
       ${summary}
-      ${warning}
       <div class="influencers-toolbar">
-        <div class="i-note">التكلفة مأخوذة من ملف المؤثرين المرفق. الأرقام غير المتاحة تظهر — بدل احتسابها صفر.</div>
+        <div class="i-note">التكلفة حسب ملف المؤثرين المرفق.</div>
         <button type="button" class="influencers-refresh" id="influencersRefresh">تحديث المؤثرين</button>
       </div>
       <div class="influencers-table-wrap">
         <table class="influencers-table">
           <thead><tr>
-            <th>المؤثر</th><th>المنصة</th><th>روابط UGC</th>
+            <th>المؤثر</th><th>المنصة</th>
             <th class="i-num">التكلفة</th><th class="i-num">المشاهدات</th><th class="i-num">الإعجابات</th>
             <th class="i-num">التعليقات</th><th class="i-num">المشاركات</th><th class="i-num">الحفظ</th>
-            <th class="i-num">إجمالي التفاعل</th><th>النقرات</th>
-            <th class="i-num">CPV</th><th class="i-num">CPE</th><th class="i-num">CPC</th>
+            <th class="i-num">إجمالي التفاعل</th><th class="i-num">CPV</th><th class="i-num">CPE</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
