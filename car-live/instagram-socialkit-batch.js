@@ -45,8 +45,6 @@
   window.fetch=async(input,init)=>{
     const url=typeof input==='string'?input:(input&&typeof input.url==='string'?input.url:'');
 
-    // Never trust the broad Instagram HTML fallback for our known campaign Reels.
-    // It can pick unrelated tiny counters from Instagram page JS.
     if(url.includes('/api/influencers')){
       const response=await nativeFetch(input,init);
       if(!response.ok) return response;
@@ -59,12 +57,9 @@
           if(post?.platform!=='instagram') continue;
           const code=String(post.url||'').match(/\/(?:reel|p|tv)\/([^/?#]+)/i)?.[1]||'';
           if(!KNOWN.has(code)) continue;
-          post.views=null;
-          post.likes=null;
-          post.comments=null;
-          post.shares=null;
-          post.saves=null;
-          post.engagement=null;
+          // Delete unavailable values instead of assigning null. The dashboard's
+          // old numeric helper treats Number(null) as 0, which created fake zeroes.
+          for(const key of ['views','likes','comments','shares','saves','reach','engagement','clicks']) delete post[key];
           post.available=false;
           post.source='awaiting-socialkit-channel-reels';
           changed=true;
@@ -97,7 +92,6 @@
       },'socialkit-channel-reels');
     }
 
-    // Exact match failed: show — rather than a false "2 / 0 / 0" from HTML parsing.
     return jsonResponse({
       ok:true,available:false,shortcode:code,
       views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,
