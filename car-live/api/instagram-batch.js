@@ -3,22 +3,20 @@ const TIMEOUT_MS=9000;
 const CACHE_SECONDS=14*24*60*60;
 const MAX_MONTHLY_CREDITS=20;
 
-// Only these two Reels returned the false 2/0/0 counters from the generic stats path.
-// Keep the rest of Instagram on the existing working/public data and spend credits only here.
-const TARGETS=[
-  {shortcode:'Dc_CBNgoovN',profile:'https://www.instagram.com/r.5i9/',url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'},
-  {shortcode:'Dcx_ep3NUJn',profile:'https://www.instagram.com/omarrating/',url:'https://www.instagram.com/omarrating/reel/Dcx_ep3NUJn/'}
+const REELS=[
+  {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/'},
+  {shortcode:'Dc_PxlJOsbs',url:'https://www.instagram.com/haneen_jeddah8_/reel/Dc_PxlJOsbs/'},
+  {shortcode:'Dc_CBNgoovN',url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'},
+  {shortcode:'Dc_2QK-RZJm',url:'https://www.instagram.com/jeddah_for_all2/reel/Dc_2QK-RZJm/'},
+  {shortcode:'DczGDbasz9-',url:'https://www.instagram.com/wo555_/reel/DczGDbasz9-/'},
+  {shortcode:'Dcx_ep3NUJn',url:'https://www.instagram.com/omarrating/reel/Dcx_ep3NUJn/'},
+  {shortcode:'Dc_sS2cOn3C',url:'https://www.instagram.com/jeddah_briefly/reel/Dc_sS2cOn3C/'}
 ];
 
 function asNum(v){
   if(v===null||v===undefined||v==='') return null;
   const n=Number(String(v).replace(/,/g,''));
   return Number.isFinite(n)?n:null;
-}
-
-function shortcodeFrom(v=''){
-  const m=String(v||'').match(/\/(?:reel|p|tv)\/([^/?#]+)/i);
-  return m?m[1]:'';
 }
 
 async function api(path,key,params={}){
@@ -35,7 +33,9 @@ async function api(path,key,params={}){
     try{body=text?JSON.parse(text):{};}catch(_){}
     if(!r.ok||body?.success===false){
       const msg=body?.error||body?.message||`SocialKit HTTP ${r.status}`;
-      throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));
+      const e=new Error(typeof msg==='string'?msg:JSON.stringify(msg));
+      e.status=r.status;
+      throw e;
     }
     return body?.data??body;
   }finally{clearTimeout(timer);}
@@ -44,36 +44,24 @@ async function api(path,key,params={}){
 async function credits(key){
   const d=await api('/credits',key);
   const m=d?.monthly||{};
-  return {used:asNum(m.used),remaining:asNum(m.remaining),limit:asNum(m.limit),resetAt:m.resetAt||null};
+  const p=d?.purchased||{};
+  const monthlyRemaining=asNum(m.remaining);
+  const purchasedRemaining=asNum(p.remaining);
+  return {
+    totalRemaining:asNum(d?.totalRemaining) ?? ((monthlyRemaining||0)+(purchasedRemaining||0)),
+    monthly:{used:asNum(m.used),remaining:monthlyRemaining,limit:asNum(m.limit),resetAt:m.resetAt||null},
+    purchased:{remaining:purchasedRemaining}
+  };
 }
 
-function nodeShortcode(node){
-  if(!node||typeof node!=='object') return '';
-  for(const key of ['shortcode','code','mediaCode']) if(node[key]) return String(node[key]);
-  for(const key of ['url','permalink','link','reelUrl','postUrl']){
-    const code=shortcodeFrom(node[key]);
-    if(code) return code;
-  }
-  return '';
-}
-
-function nodeUrl(node,fallback){
-  if(node&&typeof node==='object'){
-    for(const key of ['url','permalink','link','reelUrl','postUrl']){
-      if(/^https?:\/\//i.test(String(node[key]||''))) return String(node[key]);
-    }
-  }
-  return fallback;
-}
-
-function normalize(node,meta,source){
-  const views=asNum(node?.views??node?.viewCount??node?.videoViewCount??node?.video_view_count??node?.playCount??node?.plays??node?.play_count);
-  const likes=asNum(node?.likes??node?.likeCount??node?.like_count);
-  const comments=asNum(node?.comments??node?.commentCount??node?.comment_count);
-  const shares=asNum(node?.shares??node?.shareCount??node?.share_count);
-  const saves=asNum(node?.saves??node?.saveCount??node?.save_count??node?.collects);
+function normalize(d,meta,source){
+  const views=asNum(d?.views??d?.plays??d?.playCount??d?.viewCount);
+  const likes=asNum(d?.likes??d?.likeCount);
+  const comments=asNum(d?.comments??d?.commentCount);
+  const shares=asNum(d?.shares??d?.shareCount);
+  const saves=asNum(d?.saves??d?.collects??d?.saveCount);
   const parts=[likes,comments,shares,saves].filter(Number.isFinite);
-  const engagement=asNum(node?.engagement??node?.engagements) ?? (parts.length?parts.reduce((a,b)=>a+b,0):null);
+  const engagement=asNum(d?.engagement??d?.engagements) ?? (parts.length?parts.reduce((a,b)=>a+b,0):null);
   const suspicious=Number.isFinite(views)&&views<=5&&[likes,comments,shares,saves].every(v=>v===null||v===0);
   return {
     ...meta,views,likes,comments,shares,saves,reach:null,engagement,
@@ -82,20 +70,26 @@ function normalize(node,meta,source){
   };
 }
 
-function findTarget(root,shortcode){
-  const seen=new Set();
-  let found=null;
-  function walk(node){
-    if(found||!node||typeof node!=='object'||seen.has(node)) return;
-    seen.add(node);
-    if(!Array.isArray(node)&&nodeShortcode(node)===shortcode){found=node;return;}
-    const values=Array.isArray(node)?node:Object.values(node);
-    for(const value of values){
-      if(value&&typeof value==='object'){walk(value);if(found)return;}
+async function getStats(meta,key){
+  const d=await api('/instagram/stats',key,{
+    url:meta.url,
+    cache:'true',
+    cache_ttl:String(CACHE_SECONDS)
+  });
+  return normalize(d,meta,'socialkit-instagram-stats');
+}
+
+async function mapLimit(items,limit,worker){
+  const out=new Array(items.length);let next=0;
+  async function run(){
+    for(;;){
+      const i=next++;if(i>=items.length)return;
+      try{out[i]=await worker(items[i]);}
+      catch(e){out[i]={...items[i],available:false,error:String(e?.message||e),source:'socialkit-unavailable'};}
     }
   }
-  walk(root);
-  return found;
+  await Promise.all(Array.from({length:Math.min(limit,items.length||1)},run));
+  return out;
 }
 
 export default async function handler(req,res){
@@ -108,57 +102,40 @@ export default async function handler(req,res){
   if(!key){res.status(503).json({ok:false,error:'SocialKit Instagram key is not configured'});return;}
 
   const requested=String(req.query?.shortcode||'').trim();
-  const selected=requested?TARGETS.filter(x=>x.shortcode===requested):TARGETS;
-  if(requested&&!selected.length){
-    res.setHeader('Cache-Control','public, max-age=0, s-maxage=3600');
-    res.status(200).json({ok:true,successful:0,total:0,results:[],note:'This Reel uses the normal Instagram data path.'});return;
-  }
+  const selected=requested?REELS.filter(x=>x.shortcode===requested):REELS;
+  if(requested&&!selected.length){res.status(404).json({ok:false,error:'Unknown Instagram shortcode'});return;}
 
   try{
     const c=await credits(key);
-    let budget=Math.max(0,MAX_MONTHLY_CREDITS-(Number.isFinite(c.used)?c.used:0));
-    if(Number.isFinite(c.remaining)) budget=Math.min(budget,c.remaining);
-    const results=[];
+    const monthlyUsed=Number.isFinite(c.monthly.used)?c.monthly.used:0;
+    const monthlyRemaining=Number.isFinite(c.monthly.remaining)?c.monthly.remaining:0;
+    const freeBudget=Math.max(0,Math.min(monthlyRemaining,MAX_MONTHLY_CREDITS-monthlyUsed));
 
-    for(const meta of selected){
-      if(budget<1){
-        results.push({...meta,available:false,error:'credit_guard',source:'socialkit-credit-guard'});
-        continue;
-      }
+    let attempt=selected;
+    let mode='live-or-cache';
 
-      let best=null;
-      try{
-        const feed=await api('/instagram/channel-reels',key,{url:meta.profile,limit:'50',cache:'true',cache_ttl:String(CACHE_SECONDS)});
-        budget--;
-        const node=findTarget(feed,meta.shortcode);
-        if(node){
-          const candidate=normalize(node,meta,'socialkit-channel-reels');
-          if(candidate.available) best=candidate;
-
-          // If the listing found the exact Reel but did not expose useful counters,
-          // ask the official per-Reel stats endpoint using the exact returned/public URL.
-          if(!best&&budget>=1){
-            const stats=await api('/instagram/stats',key,{url:nodeUrl(node,meta.url),cache:'true',cache_ttl:String(CACHE_SECONDS)});
-            budget--;
-            const candidate2=normalize(stats,meta,'socialkit-instagram-stats');
-            if(candidate2.available) best=candidate2;
-          }
-        }else if(budget>=1){
-          const stats=await api('/instagram/stats',key,{url:meta.url,cache:'true',cache_ttl:String(CACHE_SECONDS)});
-          budget--;
-          const candidate=normalize(stats,meta,'socialkit-instagram-stats');
-          if(candidate.available) best=candidate;
-        }
-      }catch(e){
-        if(!best) best={...meta,available:false,error:String(e?.message||e),source:'socialkit'};
-      }
-
-      results.push(best||{...meta,available:false,error:'No trustworthy counters returned',source:'socialkit-unavailable'});
+    // When the free allowance is exhausted, still try the exact cached Stats calls.
+    // A cache hit can restore the previous result; a cache miss simply fails because
+    // there is no balance, so it cannot consume an extra free credit.
+    if(freeBudget<=0){
+      mode='cache-recovery';
+    }else if(freeBudget<selected.length){
+      attempt=selected.slice(0,freeBudget);
+      mode='limited-budget';
     }
 
+    const attemptedResults=await mapLimit(attempt,2,meta=>getStats(meta,key));
+    const byCode=new Map(attemptedResults.map(x=>[x.shortcode,x]));
+    const results=selected.map(meta=>byCode.get(meta.shortcode)||{
+      ...meta,available:false,error:'not_attempted_credit_guard',source:'socialkit-credit-guard'
+    });
+
     const successful=results.filter(x=>x.available).length;
-    res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=86400`);
-    res.status(200).json({ok:true,successful,total:selected.length,creditsBefore:c,creditsBudgetLeft:budget,cacheDays:14,results,updatedAt:new Date().toISOString()});
+    res.setHeader('Cache-Control','public, max-age=0, s-maxage=21600, stale-while-revalidate=3600');
+    res.status(200).json({
+      ok:true,mode,successful,total:selected.length,credits:c,cacheDays:14,
+      results,updatedAt:new Date().toISOString()
+    });
   }catch(e){
     res.setHeader('Cache-Control','private, no-store');
     res.status(200).json({ok:false,error:String(e?.message||e),results:[]});
