@@ -1,14 +1,18 @@
 (()=>{
   const nativeFetch=window.fetch.bind(window);
-  const batchPromise=nativeFetch('/api/instagram-batch').then(async r=>{
+  const KNOWN=new Set([
+    'Dcv2p1SoN-U','Dc_PxlJOsbs','Dc_CBNgoovN','Dc_2QK-RZJm','DczGDbasz9-','Dcx_ep3NUJn','Dc_sS2cOn3C'
+  ]);
+
+  const batchPromise=nativeFetch('/api/instagram-batch?v=3').then(async r=>{
     const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d.ok||!Array.isArray(d.results)) return null;
+    if(!r.ok||!d.ok) return {map:new Map(),meta:d||{},failed:true};
     const map=new Map();
-    for(const item of d.results){
+    for(const item of Array.isArray(d.results)?d.results:[]){
       if(item?.shortcode) map.set(String(item.shortcode),item);
     }
-    return {map,meta:d};
-  }).catch(()=>null);
+    return {map,meta:d,failed:false};
+  }).catch(()=>({map:new Map(),meta:{},failed:true}));
 
   function shortcodeFromRequest(url){
     try{
@@ -31,13 +35,18 @@
     });
   }
 
+  function jsonResponse(body,source){
+    return new Response(JSON.stringify(body),{
+      status:200,
+      headers:{'Content-Type':'application/json','X-Instagram-Source':source}
+    });
+  }
+
   window.fetch=async(input,init)=>{
     const url=typeof input==='string'?input:(input&&typeof input.url==='string'?input.url:'');
 
-    // Force every Instagram post through the SocialKit enrichment pass.
-    // The old public HTML parser can return plausible-looking false counters
-    // (for example 2 views / 0 likes / 0 comments), which previously caused
-    // influencers.js to skip SocialKit because all three fields were finite.
+    // Never trust the broad Instagram HTML fallback for our known campaign Reels.
+    // It can pick unrelated tiny counters from Instagram page JS.
     if(url.includes('/api/influencers')){
       const response=await nativeFetch(input,init);
       if(!response.ok) return response;
@@ -48,8 +57,8 @@
       for(const creator of data.influencers){
         for(const post of creator.posts||[]){
           if(post?.platform!=='instagram') continue;
-          const source=String(post.source||'').toLowerCase();
-          if(source.includes('socialkit')) continue;
+          const code=String(post.url||'').match(/\/(?:reel|p|tv)\/([^/?#]+)/i)?.[1]||'';
+          if(!KNOWN.has(code)) continue;
           post.views=null;
           post.likes=null;
           post.comments=null;
@@ -57,7 +66,7 @@
           post.saves=null;
           post.engagement=null;
           post.available=false;
-          post.source='awaiting-socialkit-batch';
+          post.source='awaiting-socialkit-channel-reels';
           changed=true;
         }
       }
@@ -68,26 +77,32 @@
     if(!url.includes('/api/instagram-public')) return nativeFetch(input,init);
 
     const code=shortcodeFromRequest(url);
-    if(code){
-      const batch=await batchPromise;
-      const hit=batch?.map?.get(code);
-      if(hit?.available){
-        const body={
-          ok:true,available:true,shortcode:code,reelUrl:hit.url,
-          views:Number.isFinite(hit.views)?hit.views:null,
-          likes:Number.isFinite(hit.likes)?hit.likes:null,
-          comments:Number.isFinite(hit.comments)?hit.comments:null,
-          shares:Number.isFinite(hit.shares)?hit.shares:null,
-          saves:Number.isFinite(hit.saves)?hit.saves:null,
-          reach:null,
-          engagement:Number.isFinite(hit.engagement)?hit.engagement:null,
-          source:'socialkit-batch',
-          batchUpdatedAt:batch.meta.updatedAt||null,
-          cacheDays:batch.meta.cacheDays||14
-        };
-        return new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json','X-Instagram-Source':'socialkit-batch'}});
-      }
+    if(!code||!KNOWN.has(code)) return nativeFetch(input,init);
+
+    const batch=await batchPromise;
+    const hit=batch?.map?.get(code);
+    if(hit?.available){
+      return jsonResponse({
+        ok:true,available:true,shortcode:code,reelUrl:hit.url,
+        views:Number.isFinite(hit.views)?hit.views:null,
+        likes:Number.isFinite(hit.likes)?hit.likes:null,
+        comments:Number.isFinite(hit.comments)?hit.comments:null,
+        shares:Number.isFinite(hit.shares)?hit.shares:null,
+        saves:Number.isFinite(hit.saves)?hit.saves:null,
+        reach:null,
+        engagement:Number.isFinite(hit.engagement)?hit.engagement:null,
+        source:hit.source||'socialkit-channel-reels',
+        batchUpdatedAt:batch.meta.updatedAt||null,
+        cacheDays:batch.meta.cacheDays||14
+      },'socialkit-channel-reels');
     }
-    return nativeFetch(input,init);
+
+    // Exact match failed: show — rather than a false "2 / 0 / 0" from HTML parsing.
+    return jsonResponse({
+      ok:true,available:false,shortcode:code,
+      views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,
+      source:'socialkit-channel-reels-unavailable',
+      note:hit?.error||batch?.meta?.reason||'Exact campaign Reel was not returned by the public profile Reels feed.'
+    },'socialkit-channel-reels-unavailable');
   };
 })();
