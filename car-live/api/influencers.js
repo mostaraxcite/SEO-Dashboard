@@ -1,38 +1,104 @@
 const SOCIALKIT_API='https://api.socialkit.dev';
-const FETCH_TIMEOUT_MS=3500;
-const MAX_CONCURRENCY=8;
+const FETCH_TIMEOUT_MS=4500;
+const MAX_CONCURRENCY=6;
 
 const INFLUENCERS=[
-  {id:'raid-abdulmosen',name:'RAID ABDULMOSEN',cost:13000,platform:'سناب + تيك توك + انستقرام',urls:[
-    'https://vt.tiktok.com/ZSVKa9pHg/',
-    'https://www.instagram.com/reel/Dcv2p1SoN-U/?igsi=MTRmaDhpcTIyaHVxdQ=='
-  ]},
-  {id:'najla-alwadaani',name:'Najla Alwadaani',cost:70000,platform:'سناب',urls:[]},
-  {id:'amani-alyousif',name:'AMANI ALYOUSIF',cost:3136,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSVUkETUP/']},
-  {id:'bushayer',name:'BUSHAYER',cost:4600,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSVAFqcVF/']},
-  {id:'hind-alajmi',name:'HIND ALAJMI',cost:4000,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSVac9c89/']},
-  {id:'majd',name:'MAJD',cost:3000,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSVPNv9Ku/']},
-  {id:'yasser-1',name:'YASSER',cost:4181,platform:'تيك توك',urls:['https://vm.tiktok.com/ZN8L9THE4/']},
-  {id:'zohor',name:'ZOHOR',cost:4725,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSVU4LsAa/']},
-  {id:'haneen-jeddah',name:'Haneen Jeddah -',cost:4000,platform:'تيك توك',urls:[]},
-  {id:'hasan-alshehri',name:'Hasan Alshehri',cost:21950,platform:'تيك توك + انستقرام',urls:[
-    'https://vt.tiktok.com/ZSqeJs5vQ/',
-    'https://www.instagram.com/reel/Dcy0wZ4Ipe6/?stkn=a203ZG5sNWtwZ244'
-  ]},
-  {id:'jeddah-briefly',name:'Jeddah Briefly',cost:4725,platform:'تيك توك',urls:[]},
-  {id:'jawlat-jeddah',name:'Jawlat Jeddah',cost:4000,platform:'تيك توك',urls:[]},
-  {id:'jaded-abha',name:'Jaded Abha',cost:2909,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSqeRS8wS/']},
-  {id:'samera-mohammed',name:'Samera Mohammed',cost:2625,platform:'تيك توك',urls:[]},
-  {id:'shouq',name:'SHOUQ',cost:2200,platform:'تيك توك',urls:['https://vt.tiktok.com/ZSqeJjg82/']},
-  {id:'yasser-2',name:'YASSER',cost:4400,platform:'سناب + تيك توك + انستقرام',urls:[
-    'https://vt.tiktok.com/ZSqJtvyvx/',
-    'https://www.instagram.com/reel/DczGDbasz9-/?igsi=d3JsazQ3Mnd4eXBj'
-  ]},
-  {id:'omar-ep',name:'OMAR EP',cost:2990,platform:'سناب + تيك توك + انستقرام',urls:[
-    'https://vt.tiktok.com/ZSqeJhr57/',
-    'https://www.instagram.com/reel/Dcx_ep3NUJn/?igsi=MWpmZGpiNWxsM2g1ZQ==',
-    'https://snapchat.com/t/a1hwYild'
-  ]}
+  {
+    id:'raid-abdulmosen',name:'RAID ABDULMOSEN',cost:13000,platform:'سناب + تيك توك + انستقرام',category:'Mega',
+    instagramProfile:'https://www.instagram.com/raidalreda/',
+    urls:[
+      'https://vt.tiktok.com/ZSVKa9pHg/',
+      'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/'
+    ]
+  },
+  {
+    id:'najla-alwadaani',name:'Najla Alwadaani',cost:70000,platform:'سناب',category:'Mega',urls:[],
+    manualMetrics:{views:564708,reach:516609,engagement:398947,source:'workbook'}
+  },
+  {
+    id:'amani-alyousif',name:'AMANI ALYOUSIF',cost:3136,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSVUkETUP/']
+  },
+  {
+    id:'bushayer',name:'BUSHAYER',cost:4600,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSVAFqcVF/']
+  },
+  {
+    id:'hind-alajmi',name:'HIND ALAJMI',cost:4000,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSVac9c89/']
+  },
+  {
+    id:'majd',name:'MAJD',cost:3000,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSVPNv9Ku/']
+  },
+  {
+    id:'yasser-1',name:'YASSER',cost:4181,platform:'تيك توك',category:'Micro',
+    urls:['https://vm.tiktok.com/ZN8L9THE4/']
+  },
+  {
+    id:'zohor',name:'ZOHOR',cost:4725,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSVU4LsAa/']
+  },
+  {
+    id:'haneen-jeddah',name:'Haneen Jeddah -',cost:4000,platform:'تيك توك',category:'Micro',
+    instagramProfile:'https://www.instagram.com/haneen_jeddah8_/',
+    urls:[
+      'https://vt.tiktok.com/ZSqMd8DVn/',
+      'https://www.instagram.com/haneen_jeddah8_/reel/Dc_PxlJOsbs/'
+    ]
+  },
+  {
+    id:'hasan-alshehri',name:'Hasan Alshehri',cost:21950,platform:'تيك توك + انستقرام',category:'Mega',
+    instagramProfile:'https://www.instagram.com/r.5i9/',
+    urls:[
+      'https://vt.tiktok.com/ZSqeJs5vQ/',
+      'https://vt.tiktok.com/ZSqMsR3dE/',
+      'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'
+    ],
+    manualFallback:{views:400000,source:'workbook-approx'}
+  },
+  {
+    id:'jawlat-jeddah',name:'Jawlat Jeddah',cost:4000,platform:'تيك توك + انستقرام',category:'Micro',
+    instagramProfile:'https://www.instagram.com/jeddah_for_all2/',
+    urls:[
+      'https://vt.tiktok.com/ZSqMp7Dxt/',
+      'https://www.instagram.com/jeddah_for_all2/reel/Dc_2QK-RZJm/'
+    ]
+  },
+  {
+    id:'jaded-abha',name:'Jaded Abha',cost:2909,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSqeRS8wS/']
+  },
+  {
+    id:'samera-mohammed',name:'Samera Mohammed',cost:2625,platform:'تيك توك',category:'Micro',
+    urls:['https://www.tiktok.com/@semo33_1/video/7682433376208391444?_r=1&_t=ZS-99VdmCirGVw']
+  },
+  {
+    id:'shouq',name:'SHOUQ',cost:2200,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSqeJjg82/']
+  },
+  {
+    id:'yasser-2',name:'YASSER',cost:4400,platform:'سناب + تيك توك + انستقرام',category:'Micro',
+    instagramProfile:'https://www.instagram.com/wo555_/',
+    urls:[
+      'https://vt.tiktok.com/ZSqJtvyvx/',
+      'https://www.instagram.com/wo555_/reel/DczGDbasz9-/'
+    ]
+  },
+  {
+    id:'omar-ep',name:'OMAR EP',cost:2990,platform:'سناب + تيك توك + انستقرام',category:'Micro',
+    instagramProfile:'https://www.instagram.com/omarrating/',
+    urls:[
+      'https://vt.tiktok.com/ZSqeJhr57/',
+      'https://www.instagram.com/omarrating/reel/Dcx_ep3NUJn/',
+      'https://snapchat.com/t/a1hwYild'
+    ]
+  },
+  {
+    id:'jeddah-briefly',name:'Jeddah Briefly',cost:4725,platform:'انستقرام',category:'Micro',
+    instagramProfile:'https://www.instagram.com/jeddah_briefly/',
+    urls:['https://www.instagram.com/jeddah_briefly/reel/Dc_sS2cOn3C/']
+  }
 ];
 
 function platformOf(url=''){
@@ -64,6 +130,14 @@ function compactCount(v){
   return Number.isFinite(n)?Math.round(n):null;
 }
 
+function firstFinite(...vals){
+  for(const v of vals){
+    const n=asNum(v);
+    if(n!==null) return n;
+  }
+  return null;
+}
+
 async function fetchText(url){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),FETCH_TIMEOUT_MS);
@@ -73,7 +147,7 @@ async function fetchText(url){
       signal:ctrl.signal,
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
-        'Accept-Language':'ar,en-US;q=0.9,en;q=0.8',
+        'Accept-Language':'en-US,en;q=0.9,ar;q=0.8',
         Accept:'text/html,application/xhtml+xml'
       }
     });
@@ -121,7 +195,7 @@ async function tiktokPublic(url){
   ].filter(Boolean);
   for(const data of candidates){
     const stats=deepFindStats(data);
-    if(stats) return {...stats,url:page.url,source:'tiktok-public',available:true};
+    if(stats) return {...stats,reach:null,engagement:null,url:page.url,source:'tiktok-public',available:true};
   }
   throw new Error('TikTok public stats not found');
 }
@@ -139,18 +213,90 @@ function metaContent(html,key){
   return '';
 }
 
-async function instagramPublic(url){
+function reelShortcode(url=''){
+  const m=String(url).match(/\/reel\/([^/?#]+)/i);
+  return m?m[1]:'';
+}
+
+function regexNumber(text,patterns){
+  for(const re of patterns){
+    const m=String(text||'').match(re);
+    if(m){
+      const n=compactCount(m[1]);
+      if(n!==null) return n;
+    }
+  }
+  return null;
+}
+
+function instagramStatsFromText(text,shortcode=''){
+  const raw=htmlDecode(String(text||''));
+  const normalized=raw
+    .replace(/\\u002F/gi,'/')
+    .replace(/\\u003D/gi,'=')
+    .replace(/\\u0026/gi,'&');
+
+  const windows=[];
+  if(shortcode){
+    let idx=normalized.indexOf(shortcode);
+    let guard=0;
+    while(idx>=0&&guard<6){
+      windows.push(normalized.slice(Math.max(0,idx-18000),Math.min(normalized.length,idx+18000)));
+      idx=normalized.indexOf(shortcode,idx+shortcode.length);
+      guard++;
+    }
+  }
+  if(!windows.length) windows.push(normalized.slice(0,120000));
+  const scoped=windows.join('\n');
+
+  const views=regexNumber(scoped,[
+    /["']?(?:video_play_count|play_count|video_view_count|view_count)["']?\s*[:=]\s*["']?([\d.,]+\s*[KMB]?)/i,
+    /([\d.,]+\s*[KMB]?)\s+(?:views?|plays?)/i
+  ]);
+  const likes=regexNumber(scoped,[
+    /["']?(?:like_count|likes_count)["']?\s*[:=]\s*["']?([\d.,]+\s*[KMB]?)/i,
+    /edge_media_preview_like[\s\S]{0,300}?["']?count["']?\s*:\s*([\d.,]+)/i,
+    /([\d.,]+\s*[KMB]?)\s+likes?/i
+  ]);
+  const comments=regexNumber(scoped,[
+    /["']?(?:comment_count|comments_count)["']?\s*[:=]\s*["']?([\d.,]+\s*[KMB]?)/i,
+    /edge_media_to_comment[\s\S]{0,300}?["']?count["']?\s*:\s*([\d.,]+)/i,
+    /([\d.,]+\s*[KMB]?)\s+comments?/i
+  ]);
+
+  return {views,likes,comments};
+}
+
+async function instagramPublic(url,profileUrl=''){
   const page=await fetchText(url);
+  const shortcode=reelShortcode(page.url)||reelShortcode(url);
   const desc=metaContent(page.text,'og:description')||metaContent(page.text,'description');
-  let likes=null,comments=null,views=null;
-  const likeMatch=desc.match(/([\d.,]+\s*[KMB]?)\s+likes?/i);
-  const commentMatch=desc.match(/([\d.,]+\s*[KMB]?)\s+comments?/i);
-  const viewMatch=desc.match(/([\d.,]+\s*[KMB]?)\s+(?:views?|plays?)/i);
-  if(likeMatch) likes=compactCount(likeMatch[1]);
-  if(commentMatch) comments=compactCount(commentMatch[1]);
-  if(viewMatch) views=compactCount(viewMatch[1]);
+  const direct=instagramStatsFromText(`${desc}\n${page.text}`,shortcode);
+
+  let views=direct.views;
+  let likes=direct.likes;
+  let comments=direct.comments;
+  let profileSource=false;
+
+  if(profileUrl&&views===null){
+    try{
+      const reelsUrl=`${String(profileUrl).replace(/\/+$/,'')}/reels/`;
+      const profile=await fetchText(reelsUrl);
+      const fromProfile=instagramStatsFromText(profile.text,shortcode);
+      views=firstFinite(views,fromProfile.views);
+      likes=firstFinite(likes,fromProfile.likes);
+      comments=firstFinite(comments,fromProfile.comments);
+      profileSource=fromProfile.views!==null||fromProfile.likes!==null||fromProfile.comments!==null;
+    }catch(_){}
+  }
+
   if([likes,comments,views].every(v=>v===null)) throw new Error('Instagram public counters not exposed');
-  return {views,likes,comments,shares:null,saves:null,url:page.url,source:'instagram-public',available:true};
+  return {
+    views,likes,comments,shares:null,saves:null,reach:null,engagement:null,
+    url:page.url,
+    source:profileSource?'instagram-public-profile+reel':'instagram-public-reel',
+    available:true
+  };
 }
 
 async function socialKit(url,key){
@@ -176,6 +322,8 @@ async function socialKit(url,key){
       comments:asNum(d.comments),
       shares:asNum(d.shares),
       saves:asNum(d.collects??d.saves),
+      reach:asNum(d.reach),
+      engagement:asNum(d.engagements??d.engagement),
       url:d.url||url,
       source:'socialkit',
       available:true
@@ -183,29 +331,32 @@ async function socialKit(url,key){
   }finally{clearTimeout(timer);}
 }
 
-async function getUrlStats(url,key){
+async function getUrlStats(item,key){
+  const url=item.url;
   const platform=platformOf(url);
   if(platform==='snapchat'){
-    return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,clicks:null,available:false,error:'Snapchat public post metrics are not exposed'};
+    return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,clicks:null,available:false,error:'Snapchat public post metrics are not exposed'};
   }
 
   if(key&&['tiktok','instagram'].includes(platform)){
     try{
       const d=await socialKit(url,key);
       if(d) return {platform,clicks:null,...d};
-    }catch(e){
-      return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,clicks:null,available:false,error:String(e?.message||e)};
-    }
+    }catch(_){}
   }
 
   try{
-    const d=platform==='tiktok'?await tiktokPublic(url):platform==='instagram'?await instagramPublic(url):null;
+    const d=platform==='tiktok'
+      ?await tiktokPublic(url)
+      :platform==='instagram'
+        ?await instagramPublic(url,item.instagramProfile||'')
+        :null;
     if(d) return {platform,clicks:null,...d};
   }catch(e){
-    return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,clicks:null,available:false,error:String(e?.message||e)};
+    return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,clicks:null,available:false,error:String(e?.message||e)};
   }
 
-  return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,clicks:null,available:false,error:'Unsupported platform'};
+  return {platform,url,views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,clicks:null,available:false,error:'Unsupported platform'};
 }
 
 async function mapLimit(items,limit,worker){
@@ -233,14 +384,33 @@ function combineMetrics(items){
   const comments=addKnown(items,'comments');
   const shares=addKnown(items,'shares');
   const saves=addKnown(items,'saves');
+  const reach=addKnown(items,'reach');
   const clicks=addKnown(items,'clicks');
+  const directEngagement=addKnown(items,'engagement');
   const engagementParts=[likes,comments,shares,saves].filter(v=>v!==null);
-  const engagement=engagementParts.length?engagementParts.reduce((a,b)=>a+b,0):null;
-  return {views,likes,comments,shares,saves,engagement,clicks};
+  const engagement=directEngagement!==null
+    ?directEngagement
+    :(engagementParts.length?engagementParts.reduce((a,b)=>a+b,0):null);
+  return {views,reach,likes,comments,shares,saves,engagement,clicks};
 }
 
 function rate(cost,value){
   return Number.isFinite(cost)&&Number.isFinite(value)&&value>0?cost/value:null;
+}
+
+function manualPost(i){
+  if(!i.manualMetrics) return null;
+  return {
+    platform:'manual',
+    url:null,
+    views:asNum(i.manualMetrics.views),
+    reach:asNum(i.manualMetrics.reach),
+    likes:null,comments:null,shares:null,saves:null,
+    engagement:asNum(i.manualMetrics.engagement),
+    clicks:null,
+    available:true,
+    source:i.manualMetrics.source||'workbook'
+  };
 }
 
 export default async function handler(req,res){
@@ -250,8 +420,8 @@ export default async function handler(req,res){
   }
 
   const key=String(process.env.SOCIALKIT_ACCESS_KEY||'').trim();
-  const allUrls=INFLUENCERS.flatMap(i=>i.urls.map(url=>({id:i.id,url})));
-  const stats=await mapLimit(allUrls,MAX_CONCURRENCY,async item=>({id:item.id,...await getUrlStats(item.url,key)}));
+  const allUrls=INFLUENCERS.flatMap(i=>i.urls.map(url=>({id:i.id,url,instagramProfile:i.instagramProfile||''})));
+  const stats=await mapLimit(allUrls,MAX_CONCURRENCY,async item=>({id:item.id,...await getUrlStats(item,key)}));
   const byId=new Map();
   for(const item of stats){
     if(!byId.has(item.id)) byId.set(item.id,[]);
@@ -260,9 +430,23 @@ export default async function handler(req,res){
 
   const influencers=INFLUENCERS.map(i=>{
     const posts=byId.get(i.id)||[];
-    const metrics=combineMetrics(posts);
+    const manual=manualPost(i);
+    if(manual) posts.push(manual);
+
+    let metrics=combineMetrics(posts);
+    if(i.manualFallback&&metrics.views===null){
+      metrics={...metrics,views:asNum(i.manualFallback.views)};
+      posts.push({
+        platform:'manual-fallback',url:null,views:asNum(i.manualFallback.views),reach:null,
+        likes:null,comments:null,shares:null,saves:null,engagement:null,clicks:null,
+        available:true,source:i.manualFallback.source||'workbook-fallback'
+      });
+    }
+
     return {
-      ...i,
+      id:i.id,name:i.name,cost:i.cost,platform:i.platform,category:i.category,
+      instagramProfile:i.instagramProfile||null,
+      urls:i.urls,
       posts,
       metrics,
       cpv:rate(i.cost,metrics.views),
@@ -279,7 +463,12 @@ export default async function handler(req,res){
     ? totals.engagement/totals.views
     : null;
 
-  res.setHeader('Cache-Control','public, max-age=0, s-maxage=3600, stale-while-revalidate=300');
+  const categoryCounts=INFLUENCERS.reduce((acc,i)=>{
+    acc[i.category]=(acc[i.category]||0)+1;
+    return acc;
+  },{Mega:0,Micro:0,UGC:0});
+
+  res.setHeader('Cache-Control','public, max-age=0, s-maxage=1800, stale-while-revalidate=300');
   res.status(200).json({
     ok:true,
     influencers,
@@ -291,15 +480,17 @@ export default async function handler(req,res){
       cpe:rate(totalCost,totals.engagement),
       cpc:rate(totalCost,totals.clicks)
     },
+    categoryCounts,
     creatorCount:INFLUENCERS.length,
     creatorsWithLinks:INFLUENCERS.filter(i=>i.urls.length).length,
     postLinkCount:allUrls.length,
     socialKitEnabled:Boolean(key),
     clickMetricsAvailable:false,
     notes:[
-      'Public social post URLs do not expose outbound click counts. Add a tracked Bitly/UTM link per influencer or platform Insights to populate clicks and CPC.',
-      'Instagram share/save counts can be unavailable publicly; unavailable fields are returned as null, not zero.',
-      'Creators without a URL in the supplied file remain visible with missingLink=true.'
+      'Classification is sourced from the latest workbook: Mega, Micro and UGC.',
+      'Instagram public extraction reads the reel page first, then the creator public /reels/ page for the matching shortcode when views are not present on the reel page.',
+      'Instagram reach, shares and saves may be unavailable publicly; unavailable fields are returned as null, not zero.',
+      'Outbound clicks require a tracked Bitly/UTM link or authenticated platform Insights.'
     ],
     updatedAt:new Date().toISOString()
   });
