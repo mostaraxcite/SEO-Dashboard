@@ -20,8 +20,51 @@
     }catch(_){return '';}
   }
 
+  function responseWithJson(original,data){
+    const headers=new Headers(original.headers);
+    headers.set('Content-Type','application/json');
+    headers.set('X-Instagram-Batch-Guard','1');
+    return new Response(JSON.stringify(data),{
+      status:original.status,
+      statusText:original.statusText,
+      headers
+    });
+  }
+
   window.fetch=async(input,init)=>{
     const url=typeof input==='string'?input:(input&&typeof input.url==='string'?input.url:'');
+
+    // Force every Instagram post through the SocialKit enrichment pass.
+    // The old public HTML parser can return plausible-looking false counters
+    // (for example 2 views / 0 likes / 0 comments), which previously caused
+    // influencers.js to skip SocialKit because all three fields were finite.
+    if(url.includes('/api/influencers')){
+      const response=await nativeFetch(input,init);
+      if(!response.ok) return response;
+      const data=await response.clone().json().catch(()=>null);
+      if(!data?.ok||!Array.isArray(data.influencers)) return response;
+
+      let changed=false;
+      for(const creator of data.influencers){
+        for(const post of creator.posts||[]){
+          if(post?.platform!=='instagram') continue;
+          const source=String(post.source||'').toLowerCase();
+          if(source.includes('socialkit')) continue;
+          post.views=null;
+          post.likes=null;
+          post.comments=null;
+          post.shares=null;
+          post.saves=null;
+          post.engagement=null;
+          post.available=false;
+          post.source='awaiting-socialkit-batch';
+          changed=true;
+        }
+      }
+      if(changed) return responseWithJson(response,data);
+      return response;
+    }
+
     if(!url.includes('/api/instagram-public')) return nativeFetch(input,init);
 
     const code=shortcodeFromRequest(url);
