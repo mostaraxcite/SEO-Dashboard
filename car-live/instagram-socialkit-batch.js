@@ -3,6 +3,7 @@
   const KNOWN=new Set([
     'Dcv2p1SoN-U','Dc_PxlJOsbs','Dc_CBNgoovN','Dc_2QK-RZJm','DczGDbasz9-','Dcx_ep3NUJn','Dc_sS2cOn3C'
   ]);
+  const METRIC_KEYS=['views','likes','comments','shares','saves','reach','engagement','clicks'];
 
   const batchPromise=nativeFetch('/api/instagram-batch?v=3').then(async r=>{
     const d=await r.json().catch(()=>({}));
@@ -54,12 +55,22 @@
       let changed=false;
       for(const creator of data.influencers){
         for(const post of creator.posts||[]){
+          // The current dashboard helper converts Number(null) to 0. Remove null
+          // fields before rendering so unavailable metrics display as — on every platform.
+          for(const key of METRIC_KEYS){
+            if(post[key]===null||post[key]===undefined){
+              delete post[key];
+              changed=true;
+            }
+          }
+
           if(post?.platform!=='instagram') continue;
           const code=String(post.url||'').match(/\/(?:reel|p|tv)\/([^/?#]+)/i)?.[1]||'';
           if(!KNOWN.has(code)) continue;
-          // Delete unavailable values instead of assigning null. The dashboard's
-          // old numeric helper treats Number(null) as 0, which created fake zeroes.
-          for(const key of ['views','likes','comments','shares','saves','reach','engagement','clicks']) delete post[key];
+
+          // Known campaign Instagram Reels must be filled only from an exact
+          // SocialKit profile-feed shortcode match, never from broad page parsing.
+          for(const key of METRIC_KEYS) delete post[key];
           post.available=false;
           post.source='awaiting-socialkit-channel-reels';
           changed=true;
