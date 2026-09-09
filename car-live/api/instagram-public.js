@@ -1,5 +1,23 @@
 const TIMEOUT_MS=5500;
 const IG_APP_ID='936619743392459';
+const SOCIALKIT_API='https://api.socialkit.dev';
+const TWO_DAYS_MS=2*24*60*60*1000;
+const PUBLIC_CACHE_SECONDS=2*24*60*60;
+const SOCIALKIT_CACHE_SECONDS=14*24*60*60;
+const MAX_MONTHLY_SOCIALKIT_CREDITS=20;
+
+// One Instagram reel is refreshed through SocialKit every 2 days.
+// With 7 reels this gives each reel a fresh SocialKit read about every 14 days
+// and keeps normal monthly usage around 15 requests, below the free 20-credit cap.
+const ROTATION_SHORTCODES=[
+  'Dcv2p1SoN-U',
+  'Dc_PxlJOsbs',
+  'Dc_CBNgoovN',
+  'Dc_2QK-RZJm',
+  'DczGDbasz9-',
+  'Dcx_ep3NUJn',
+  'Dc_sS2cOn3C'
+];
 
 function asNum(v){
   if(v===null||v===undefined||v==='') return null;
@@ -175,6 +193,70 @@ async function request(url,username='',json=false){
   }finally{ clearTimeout(timer); }
 }
 
+async function socialKitJson(path,key,params={}){
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),TIMEOUT_MS);
+  try{
+    const q=new URLSearchParams(params);
+    const url=`${SOCIALKIT_API}${path}${q.size?`?${q}`:''}`;
+    const r=await fetch(url,{
+      signal:ctrl.signal,
+      headers:{'Accept':'application/json','x-access-key':key}
+    });
+    const text=await r.text();
+    let body={};
+    try{body=text?JSON.parse(text):{};}catch(_){}
+    if(!r.ok||body?.success===false){
+      const message=body?.error||body?.message||`SocialKit HTTP ${r.status}`;
+      const e=new Error(typeof message==='string'?message:JSON.stringify(message));
+      e.status=r.status;
+      throw e;
+    }
+    return body?.data??body;
+  }finally{clearTimeout(timer);}
+}
+
+async function getSocialKitCredits(key){
+  const d=await socialKitJson('/credits',key);
+  const monthly=d?.monthly||{};
+  return {
+    limit:asNum(monthly.limit),
+    used:asNum(monthly.used),
+    remaining:asNum(monthly.remaining),
+    resetAt:monthly.resetAt||null
+  };
+}
+
+async function socialKitInstagramStats(reelUrl,key){
+  const d=await socialKitJson('/instagram/stats',key,{
+    url:reelUrl,
+    cache:'true',
+    cache_ttl:String(SOCIALKIT_CACHE_SECONDS)
+  });
+  return {
+    views:first(d?.views,d?.plays,d?.playCount,d?.viewCount),
+    likes:first(d?.likes,d?.likeCount),
+    comments:first(d?.comments,d?.commentCount),
+    shares:first(d?.shares,d?.shareCount),
+    saves:first(d?.saves,d?.collects,d?.saveCount),
+    reach:null,
+    engagement:first(d?.engagement,d?.engagements),
+    source:'socialkit'
+  };
+}
+
+function rotationState(shortcode){
+  const count=ROTATION_SHORTCODES.length;
+  const reelIndex=ROTATION_SHORTCODES.indexOf(shortcode);
+  const slot=count?Math.floor(Date.now()/TWO_DAYS_MS)%count:-1;
+  return {
+    count,
+    reelIndex,
+    slot,
+    selected:reelIndex>=0&&reelIndex===slot
+  };
+}
+
 async function resolveInstagram(username,shortcode,reelUrl,profileUrl){
   let out={views:null,likes:null,comments:null,shares:null,saves:null};
   const sources=[];
@@ -238,18 +320,63 @@ export default async function handler(req,res){
 
   const profileUrl=profile&&/^https?:\/\//i.test(profile)?profile:(username?`https://www.instagram.com/${username}/`:'');
   const reelUrl=reel&&/^https?:\/\//i.test(reel)?reel:(shortcode&&username?`https://www.instagram.com/${username}/reel/${shortcode}/`:'');
+  const key=String(process.env.SOCIALKIT_INSTAGRAM_ACCESS_KEY||'').trim();
+  const rotation=rotationState(shortcode);
+
+  let socialKitAttempted=false;
+  let socialKitUsed=false;
+  let credits=null;
+  let socialKitNote=null;
+
+  if(key&&reelUrl&&rotation.selected){
+    socialKitAttempted=true;
+    try{
+      credits=await getSocialKitCredits(key);
+      const used=Number.isFinite(credits.used)?credits.used:0;
+      const remaining=Number.isFinite(credits.remaining)?credits.remaining:null;
+      const allowed=used<MAX_MONTHLY_SOCIALKIT_CREDITS&&(remaining===null||remaining>0);
+      if(allowed){
+        const stats=await socialKitInstagramStats(reelUrl,key);
+        if(hasStats(stats)){
+          socialKitUsed=true;
+          res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${SOCIALKIT_CACHE_SECONDS}, stale-while-revalidate=3600`);
+          res.status(200).json({
+            ok:true,available:true,username,shortcode,reelUrl,profileUrl,
+            views:stats.views,likes:stats.likes,comments:stats.comments,shares:stats.shares,saves:stats.saves,
+            reach:stats.reach,engagement:stats.engagement,source:'socialkit',
+            socialKit:{enabled:true,used:true,monthlyUsed:credits.used,monthlyRemaining:credits.remaining,resetAt:credits.resetAt},
+            rotation:{...rotation,intervalDays:2},
+            note:null
+          });
+          return;
+        }
+        socialKitNote='SocialKit returned no usable counters.';
+      }else{
+        socialKitNote='Monthly SocialKit free-credit cap reached; using public Instagram fallback.';
+      }
+    }catch(e){
+      socialKitNote=`SocialKit unavailable: ${String(e?.message||e)}`;
+    }
+  }
 
   try{
     const stats=await resolveInstagram(username,shortcode,reelUrl,profileUrl);
     const available=hasStats(stats);
-    res.setHeader('Cache-Control','public, max-age=0, s-maxage=900, stale-while-revalidate=300');
+    res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${PUBLIC_CACHE_SECONDS}, stale-while-revalidate=1800`);
     res.status(200).json({
       ok:true,available,username,shortcode,reelUrl,profileUrl,
       views:stats.views,likes:stats.likes,comments:stats.comments,shares:stats.shares,saves:stats.saves,
       reach:null,engagement:null,source:stats.source,
-      note:available?null:'Instagram returned no public counters to this server request.'
+      socialKit:{enabled:Boolean(key),attempted:socialKitAttempted,used:socialKitUsed,monthlyUsed:credits?.used??null,monthlyRemaining:credits?.remaining??null,resetAt:credits?.resetAt??null},
+      rotation:{...rotation,intervalDays:2},
+      note:available?(socialKitNote||null):(socialKitNote||'Instagram returned no public counters to this server request.')
     });
   }catch(e){
-    res.status(200).json({ok:true,available:false,username,shortcode,views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,source:'unavailable',note:String(e?.message||e)});
+    res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${PUBLIC_CACHE_SECONDS}, stale-while-revalidate=1800`);
+    res.status(200).json({
+      ok:true,available:false,username,shortcode,views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,
+      source:'unavailable',socialKit:{enabled:Boolean(key),attempted:socialKitAttempted,used:false},rotation:{...rotation,intervalDays:2},
+      note:socialKitNote||String(e?.message||e)
+    });
   }
 }
