@@ -6,9 +6,6 @@
     'Dcv2p1SoN-U','Dc_PxlJOsbs','Dc_CBNgoovN','Dc_2QK-RZJm','DczGDbasz9-','Dcx_ep3NUJn','Dc_sS2cOn3C'
   ]);
 
-  // This is the one SocialKit result we can verify from the earlier dashboard
-  // screenshot in this session. Keep it as a repository fallback so it cannot
-  // disappear on a Vercel redeploy.
   const SEED={
     'Dc_sS2cOn3C':{
       views:5112,likes:58,comments:14,shares:0,saves:0,reach:null,engagement:72,
@@ -47,7 +44,7 @@
 
   function saveGood(code,obj){
     if(!code||!trustworthy(obj)) return;
-    const saved={source:obj.source||'socialkit',updatedAt:obj.updatedAt||new Date().toISOString()};
+    const saved={source:obj.source||'instagram-provider',updatedAt:obj.updatedAt||new Date().toISOString()};
     for(const key of METRIC_KEYS) saved[key]=finite(obj[key])?Number(obj[key]):null;
     store[code]=saved;
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(store));}catch(_){}
@@ -100,7 +97,7 @@
     });
   }
 
-  const batchPromise=nativeFetch('/api/instagram-batch?v=6').then(async r=>{
+  const batchPromise=nativeFetch('/api/instagram-batch?v=7').then(async r=>{
     const d=await r.json().catch(()=>({}));
     const map=new Map();
     if(r.ok&&d?.ok&&Array.isArray(d.results)){
@@ -186,7 +183,7 @@
         note:'Rejected an implausible Instagram fallback counter.'
       },'instagram-suspicious-filter');
     }
-    if(data?.ok&&data?.available&&String(data.source||'').includes('socialkit')&&trustworthy(data)) saveGood(code,data);
+    if(data?.ok&&data?.available&&trustworthy(data)) saveGood(code,data);
     return response;
   };
 })();
