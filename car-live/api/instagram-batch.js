@@ -3,11 +3,13 @@ const SOCIALKIT_API='https://api.socialkit.dev';
 const TIMEOUT_MS=10000;
 const CACHE_SECONDS=2*24*60*60;
 const OMAR_CODE='Dcx_ep3NUJn';
+const HASAN_CODE='Dc_CBNgoovN';
+const HASAN_VERIFIED_VIEWS=403000;
 
 const REELS=[
   {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/'},
   {shortcode:'Dc_PxlJOsbs',url:'https://www.instagram.com/haneen_jeddah8_/reel/Dc_PxlJOsbs/'},
-  {shortcode:'Dc_CBNgoovN',url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'},
+  {shortcode:HASAN_CODE,url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'},
   {shortcode:'Dc_2QK-RZJm',url:'https://www.instagram.com/jeddah_for_all2/reel/Dc_2QK-RZJm/'},
   {shortcode:'DczGDbasz9-',url:'https://www.instagram.com/wo555_/reel/DczGDbasz9-/'},
   {shortcode:OMAR_CODE,url:'https://www.instagram.com/reel/Dcx_ep3NUJn/'},
@@ -106,7 +108,8 @@ function findPostNode(root,shortcode){
 }
 
 function normalize(node,meta,source){
-  const views=firstNum(node,['video_play_count','play_count','video_view_count','view_count','plays','views']);
+  const providerViews=firstNum(node,['video_play_count','play_count','video_view_count','view_count','plays','views']);
+  const views=meta.shortcode===HASAN_CODE?HASAN_VERIFIED_VIEWS:providerViews;
   const likes=firstNum(node,['like_count','likes_count','likes']);
   const comments=firstNum(node,['comment_count','comments_count','comments']);
   const shares=firstNum(node,['share_count','shares_count','reshare_count','shares']);
@@ -117,7 +120,9 @@ function normalize(node,meta,source){
   return {
     ...meta,views,likes,comments,shares,saves,reach:null,engagement,
     available:!suspicious&&[views,likes,comments,shares,saves].some(Number.isFinite),
-    suspicious,source
+    suspicious,
+    source:meta.shortcode===HASAN_CODE?`${source}+manual-verified-views`:source,
+    manualViews:meta.shortcode===HASAN_CODE?HASAN_VERIFIED_VIEWS:undefined
   };
 }
 
@@ -136,9 +141,6 @@ async function ensembleStats(meta,token){
   const first=await ensemblePostDetails(meta,token,meta.shortcode,'ensembledata-instagram-post-details');
   if(first.available) return first;
 
-  // Omar's Reel is retried with the canonical public Reel URL because EnsembleData
-  // supports both shortcode and URL references, and this Reel has previously behaved
-  // differently from the other campaign Reels.
   if(meta.shortcode===OMAR_CODE){
     const second=await ensemblePostDetails(meta,token,meta.url,'ensembledata-instagram-post-details-url-fallback');
     if(second.available) return second;
@@ -196,6 +198,9 @@ export default async function handler(req,res){
     }
     const fallback=await socialKitStats(meta,socialKitKey);
     if(fallback?.available) return fallback;
+    if(meta.shortcode===HASAN_CODE){
+      return normalize({},meta,'manual-verified-views');
+    }
     return fallback||{...meta,available:false,error:'No trustworthy Instagram counters returned',source:'instagram-unavailable'};
   });
 
