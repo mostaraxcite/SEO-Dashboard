@@ -43,11 +43,19 @@
   const store=readStore();
 
   function saveGood(code,obj){
-    if(!code||!trustworthy(obj)) return;
-    const saved={source:obj.source||'instagram-provider',updatedAt:obj.updatedAt||new Date().toISOString()};
-    for(const key of METRIC_KEYS) saved[key]=finite(obj[key])?Number(obj[key]):null;
+    if(!code||!trustworthy(obj)) return null;
+    const previous=store[code]||{};
+    const saved={source:obj.source||previous.source||'instagram-provider',updatedAt:obj.updatedAt||new Date().toISOString()};
+    for(const key of METRIC_KEYS){
+      if(finite(obj[key])) saved[key]=Number(obj[key]);
+      else if(finite(previous[key])) saved[key]=Number(previous[key]);
+      else saved[key]=null;
+    }
+    const parts=['likes','comments','shares','saves'].map(k=>saved[k]).filter(Number.isFinite);
+    saved.engagement=parts.length?parts.reduce((a,b)=>a+b,0):saved.engagement;
     store[code]=saved;
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(store));}catch(_){}
+    return saved;
   }
 
   function applyGood(target,source){
@@ -97,14 +105,15 @@
     });
   }
 
-  const batchPromise=nativeFetch('/api/instagram-batch?v=12').then(async r=>{
+  const batchPromise=nativeFetch('/api/instagram-batch?v=13').then(async r=>{
     const d=await r.json().catch(()=>({}));
     const map=new Map();
     if(r.ok&&d?.ok&&Array.isArray(d.results)){
       for(const item of d.results){
         if(item?.shortcode&&trustworthy(item)){
-          saveGood(String(item.shortcode),{...item,updatedAt:d.updatedAt});
-          map.set(String(item.shortcode),item);
+          const code=String(item.shortcode);
+          const merged=saveGood(code,{...item,updatedAt:d.updatedAt});
+          map.set(code,merged||item);
         }
       }
     }
