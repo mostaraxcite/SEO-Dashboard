@@ -1,3 +1,4 @@
+const SOCIALCRAWL_API='https://www.socialcrawl.dev/v1';
 const ENSEMBLE_API='https://ensembledata.com/apis';
 const SOCIALKIT_API='https://api.socialkit.dev';
 const TIMEOUT_MS=10000;
@@ -30,8 +31,8 @@ async function fetchJson(url,headers={}){
     const text=await r.text();
     let body={};
     try{body=text?JSON.parse(text):{};}catch(_){}
-    if(!r.ok){
-      const msg=body?.message||body?.error||`HTTP ${r.status}`;
+    if(!r.ok||body?.success===false){
+      const msg=body?.message||body?.error||body?.detail||`HTTP ${r.status}`;
       throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));
     }
     return body;
@@ -47,11 +48,63 @@ function firstNum(obj,keys){
   return null;
 }
 
+function withManualOverride(result){
+  if(result.shortcode!==HASAN_CODE) return result;
+  return {
+    ...result,
+    views:HASAN_VERIFIED_VIEWS,
+    available:true,
+    source:`${result.source||'instagram-provider'}+manual-verified-views`,
+    manualViews:HASAN_VERIFIED_VIEWS
+  };
+}
+
+function normalizeFlat(node,meta,source){
+  const views=firstNum(node,['video_play_count','play_count','video_view_count','view_count','plays','views']);
+  const likes=firstNum(node,['like_count','likes_count','likes']);
+  const comments=firstNum(node,['comment_count','comments_count','comments']);
+  const shares=firstNum(node,['share_count','shares_count','reshare_count','shares']);
+  const saves=firstNum(node,['save_count','saved_count','saves']);
+  const parts=[likes,comments,shares,saves].filter(Number.isFinite);
+  const engagement=parts.length?parts.reduce((a,b)=>a+b,0):null;
+  const suspicious=Number.isFinite(views)&&views<=5&&[likes,comments,shares,saves].every(v=>v===null||v===0);
+  return withManualOverride({
+    ...meta,views,likes,comments,shares,saves,reach:null,engagement,
+    available:!suspicious&&[views,likes,comments,shares,saves].some(Number.isFinite),
+    suspicious,source
+  });
+}
+
+function normalizeSocialCrawl(body,meta,source){
+  const post=body?.data?.post||body?.post||body?.data||{};
+  const engagement=post?.engagement||body?.data?.engagement||{};
+  const views=asNum(engagement?.views);
+  const likes=asNum(engagement?.likes);
+  const comments=asNum(engagement?.comments);
+  const shares=asNum(engagement?.shares);
+  const saves=asNum(engagement?.saves);
+  const parts=[likes,comments,shares,saves].filter(Number.isFinite);
+  const totalEngagement=parts.length?parts.reduce((a,b)=>a+b,0):null;
+  const suspicious=Number.isFinite(views)&&views<=5&&[likes,comments,shares,saves].every(v=>v===null||v===0);
+  return withManualOverride({
+    ...meta,views,likes,comments,shares,saves,reach:null,engagement:totalEngagement,
+    available:!suspicious&&[views,likes,comments,shares,saves].some(Number.isFinite),
+    suspicious,source,
+    cached:body?.cached===true,
+    creditsUsed:asNum(body?.credits_used),
+    creditsRemaining:asNum(body?.credits_remaining)
+  });
+}
+
+async function socialCrawlStats(meta,key){
+  const q=new URLSearchParams({url:meta.url});
+  const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/post/stats?${q}`,{'x-api-key':key});
+  return normalizeSocialCrawl(body,meta,'socialcrawl-instagram-post-stats');
+}
+
 function nodeCode(node){
   if(!node||typeof node!=='object') return '';
-  for(const key of ['shortcode','code']){
-    if(node[key]) return String(node[key]);
-  }
+  for(const key of ['shortcode','code']) if(node[key]) return String(node[key]);
   for(const key of ['url','permalink','link']){
     const m=String(node[key]||'').match(/\/(?:reel|p|tv)\/([^/?#]+)/i);
     if(m) return m[1];
@@ -107,44 +160,18 @@ function findPostNode(root,shortcode){
   return metricCandidate||findMetricDescendant(root)||root;
 }
 
-function normalize(node,meta,source){
-  const providerViews=firstNum(node,['video_play_count','play_count','video_view_count','view_count','plays','views']);
-  const views=meta.shortcode===HASAN_CODE?HASAN_VERIFIED_VIEWS:providerViews;
-  const likes=firstNum(node,['like_count','likes_count','likes']);
-  const comments=firstNum(node,['comment_count','comments_count','comments']);
-  const shares=firstNum(node,['share_count','shares_count','reshare_count','shares']);
-  const saves=firstNum(node,['save_count','saved_count','saves']);
-  const parts=[likes,comments,shares,saves].filter(Number.isFinite);
-  const engagement=parts.length?parts.reduce((a,b)=>a+b,0):null;
-  const suspicious=Number.isFinite(views)&&views<=5&&[likes,comments,shares,saves].every(v=>v===null||v===0);
-  return {
-    ...meta,views,likes,comments,shares,saves,reach:null,engagement,
-    available:!suspicious&&[views,likes,comments,shares,saves].some(Number.isFinite),
-    suspicious,
-    source:meta.shortcode===HASAN_CODE?`${source}+manual-verified-views`:source,
-    manualViews:meta.shortcode===HASAN_CODE?HASAN_VERIFIED_VIEWS:undefined
-  };
-}
-
 async function ensemblePostDetails(meta,token,reference,source){
-  const q=new URLSearchParams({
-    code:reference,
-    n_comments_to_fetch:'0',
-    token
-  });
+  const q=new URLSearchParams({code:reference,n_comments_to_fetch:'0',token});
   const body=await fetchJson(`${ENSEMBLE_API}/instagram/post/details?${q}`);
-  const node=findPostNode(body,meta.shortcode);
-  return normalize(node,meta,source);
+  return normalizeFlat(findPostNode(body,meta.shortcode),meta,source);
 }
 
 async function ensembleStats(meta,token){
   const first=await ensemblePostDetails(meta,token,meta.shortcode,'ensembledata-instagram-post-details');
   if(first.available) return first;
-
   if(meta.shortcode===OMAR_CODE){
     const second=await ensemblePostDetails(meta,token,meta.url,'ensembledata-instagram-post-details-url-fallback');
     if(second.available) return second;
-    return {...second,error:'Omar Reel returned no trustworthy counters from shortcode or URL lookup'};
   }
   return first;
 }
@@ -153,8 +180,7 @@ async function socialKitStats(meta,key){
   if(!key) return null;
   const q=new URLSearchParams({url:meta.url,cache:'true',cache_ttl:String(14*24*60*60)});
   const body=await fetchJson(`${SOCIALKIT_API}/instagram/stats?${q}`,{'x-access-key':key});
-  const node=body?.data??body;
-  return normalize(node,meta,'socialkit-instagram-stats');
+  return normalizeFlat(body?.data??body,meta,'socialkit-instagram-stats');
 }
 
 async function mapLimit(items,limit,worker){
@@ -176,9 +202,10 @@ export default async function handler(req,res){
     res.status(405).json({ok:false,error:'Method not allowed'});return;
   }
 
+  const socialCrawlKey=String(process.env.SOCIALCRAWL_API_KEY||'').trim();
   const ensembleToken=String(process.env.ENSEMBLEDATA_API_TOKEN||process.env.ENSEMBLEDATA_TOKEN||'').trim();
   const socialKitKey=String(process.env.SOCIALKIT_INSTAGRAM_ACCESS_KEY||'').trim();
-  if(!ensembleToken&&!socialKitKey){
+  if(!socialCrawlKey&&!ensembleToken&&!socialKitKey){
     res.status(503).json({ok:false,error:'No Instagram data provider is configured'});return;
   }
 
@@ -186,28 +213,37 @@ export default async function handler(req,res){
   const selected=requested?REELS.filter(x=>x.shortcode===requested):REELS;
   if(requested&&!selected.length){res.status(404).json({ok:false,error:'Unknown Instagram shortcode'});return;}
 
-  const provider=ensembleToken?'ensembledata':'socialkit-fallback';
-  const results=await mapLimit(selected,2,async meta=>{
+  const provider=socialCrawlKey?'socialcrawl':(ensembleToken?'ensembledata':'socialkit-fallback');
+  const results=await mapLimit(selected,3,async meta=>{
+    if(socialCrawlKey){
+      try{
+        const r=await socialCrawlStats(meta,socialCrawlKey);
+        if(r.available) return r;
+      }catch(_){}
+    }
     if(ensembleToken){
       try{
         const r=await ensembleStats(meta,ensembleToken);
         if(r.available) return r;
-      }catch(e){
-        if(!socialKitKey) throw e;
-      }
+      }catch(_){}
     }
-    const fallback=await socialKitStats(meta,socialKitKey);
-    if(fallback?.available) return fallback;
-    if(meta.shortcode===HASAN_CODE){
-      return normalize({},meta,'manual-verified-views');
+    if(socialKitKey){
+      try{
+        const r=await socialKitStats(meta,socialKitKey);
+        if(r?.available) return r;
+      }catch(_){}
     }
-    return fallback||{...meta,available:false,error:'No trustworthy Instagram counters returned',source:'instagram-unavailable'};
+    if(meta.shortcode===HASAN_CODE) return normalizeFlat({},meta,'manual-verified-views');
+    return {...meta,available:false,error:'No trustworthy Instagram counters returned',source:'instagram-unavailable'};
   });
 
   const successful=results.filter(x=>x.available).length;
+  const socialCrawlCreditsUsed=results.reduce((sum,x)=>sum+(x.source?.startsWith('socialcrawl')?(asNum(x.creditsUsed)||0):0),0);
   res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=21600`);
   res.status(200).json({
-    ok:true,provider,successful,total:selected.length,unitEstimate:ensembleToken?selected.length*2:null,
+    ok:true,provider,successful,total:selected.length,
+    socialCrawlCreditEstimate:socialCrawlKey?selected.length:null,
+    socialCrawlCreditsUsed,
     cacheDays:2,results,updatedAt:new Date().toISOString()
   });
 }
