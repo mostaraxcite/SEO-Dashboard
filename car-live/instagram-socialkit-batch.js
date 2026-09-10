@@ -97,7 +97,7 @@
     });
   }
 
-  const batchPromise=nativeFetch('/api/instagram-batch?v=8').then(async r=>{
+  const batchPromise=nativeFetch('/api/instagram-batch?v=9').then(async r=>{
     const d=await r.json().catch(()=>({}));
     const map=new Map();
     if(r.ok&&d?.ok&&Array.isArray(d.results)){
