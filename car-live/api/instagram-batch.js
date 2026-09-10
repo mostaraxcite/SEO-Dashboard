@@ -4,11 +4,12 @@ const SOCIALKIT_API='https://api.socialkit.dev';
 const TIMEOUT_MS=10000;
 const CACHE_SECONDS=2*24*60*60;
 const OMAR_CODE='Dcx_ep3NUJn';
+const HASAN_CODE='Dc_CBNgoovN';
 
 const REELS=[
   {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/'},
   {shortcode:'Dc_PxlJOsbs',url:'https://www.instagram.com/haneen_jeddah8_/reel/Dc_PxlJOsbs/'},
-  {shortcode:'Dc_CBNgoovN',url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'},
+  {shortcode:HASAN_CODE,url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/',handle:'r.5i9'},
   {shortcode:'Dc_2QK-RZJm',url:'https://www.instagram.com/jeddah_for_all2/reel/Dc_2QK-RZJm/'},
   {shortcode:'DczGDbasz9-',url:'https://www.instagram.com/wo555_/reel/DczGDbasz9-/'},
   {shortcode:OMAR_CODE,url:'https://www.instagram.com/omarrating/reel/Dcx_ep3NUJn/'},
@@ -57,18 +58,64 @@ function result(meta,source,{views=null,likes=null,comments=null,shares=null,sav
   };
 }
 
-function normalizeSocialCrawl(body,meta){
+function normalizeSocialCrawl(body,meta,source='socialcrawl-instagram-post-stats'){
   const post=body?.data?.post||body?.post||body?.data||{};
   const engagement=post?.engagement||body?.data?.engagement||{};
   const computed=post?.computed||body?.data?.computed||{};
   const ext=post?.ext||{};
-  const normalized=result(meta,'socialcrawl-instagram-post-stats',{
+  const normalized=result(meta,source,{
     views:asNum(engagement?.views??post?.views??ext?.ig_play_count??ext?.play_count),
     likes:asNum(engagement?.likes??post?.likes),
     comments:asNum(engagement?.comments??post?.comments),
     shares:asNum(engagement?.shares??post?.shares),
     saves:asNum(engagement?.saves??post?.saves),
     reach:asNum(computed?.estimated_reach)
+  });
+  return {
+    ...normalized,
+    cached:body?.cached===true,
+    creditsUsed:asNum(body?.credits_used),
+    creditsRemaining:asNum(body?.credits_remaining),
+    requestId:body?.request_id||null
+  };
+}
+
+function codeFromPost(post){
+  if(!post||typeof post!=='object') return '';
+  if(post.shortcode) return String(post.shortcode);
+  if(post.code) return String(post.code);
+  const url=String(post.url||post.permalink||post.link||'');
+  return url.match(/\/(?:reel|p|tv)\/([^/?#]+)/i)?.[1]||'';
+}
+
+function findSocialCrawlReel(body,shortcode){
+  const items=body?.data?.items||body?.items||[];
+  if(!Array.isArray(items)) return null;
+  for(const item of items){
+    const post=item?.post||item;
+    if(codeFromPost(post)===shortcode) return {post,computed:item?.computed||post?.computed||null};
+  }
+  return null;
+}
+
+async function socialCrawlProfileReel(meta,key){
+  if(!meta.handle) return null;
+  const q=new URLSearchParams({handle:meta.handle,trim:'true'});
+  const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/profile/reels?${q}`,{
+    'x-api-key':key,
+    'Cache-Control':'no-cache'
+  });
+  const hit=findSocialCrawlReel(body,meta.shortcode);
+  if(!hit) return {...meta,available:false,source:'socialcrawl-instagram-profile-reels',error:'Target reel not found in profile reels page'};
+  const e=hit.post?.engagement||{};
+  const ext=hit.post?.ext||{};
+  const normalized=result(meta,'socialcrawl-instagram-profile-reels',{
+    views:asNum(e.views??ext.ig_play_count??ext.play_count),
+    likes:asNum(e.likes),
+    comments:asNum(e.comments),
+    shares:asNum(e.shares),
+    saves:asNum(e.saves),
+    reach:asNum(hit.computed?.estimated_reach)
   });
   return {
     ...normalized,
@@ -196,7 +243,14 @@ export default async function handler(req,res){
   const provider=socialCrawlKey?'socialcrawl':(ensembleToken?'ensembledata':'socialkit-fallback');
   const results=await mapLimit(selected,3,async meta=>{
     if(socialCrawlKey){
-      try{const r=await socialCrawlStats(meta,socialCrawlKey);if(r.available)return r;}catch(_){}
+      if(meta.shortcode===HASAN_CODE){
+        try{
+          const r=await socialCrawlProfileReel(meta,socialCrawlKey);
+          if(r?.available) return r;
+        }catch(_){}
+      }else{
+        try{const r=await socialCrawlStats(meta,socialCrawlKey);if(r.available)return r;}catch(_){}
+      }
     }
     if(ensembleToken){
       try{const r=await ensembleStats(meta,ensembleToken);if(r.available)return r;}catch(_){}
@@ -208,7 +262,7 @@ export default async function handler(req,res){
   });
 
   const successful=results.filter(x=>x.available).length;
-  const socialCrawlCreditsUsed=results.reduce((sum,x)=>sum+(x.source==='socialcrawl-instagram-post-stats'?(asNum(x.creditsUsed)||0):0),0);
+  const socialCrawlCreditsUsed=results.reduce((sum,x)=>sum+(String(x.source||'').startsWith('socialcrawl-')?(asNum(x.creditsUsed)||0):0),0);
   res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=21600`);
   res.status(200).json({
     ok:true,provider,successful,total:selected.length,
