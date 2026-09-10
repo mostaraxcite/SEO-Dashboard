@@ -1,6 +1,6 @@
 (()=>{
   const nativeFetch=window.fetch.bind(window);
-  const STORAGE_KEY='jp_instagram_last_good_v1';
+  const STORAGE_KEY='jp_instagram_last_good_v2';
   const METRIC_KEYS=['views','likes','comments','shares','saves','reach','engagement'];
   const ALL_CODES=new Set([
     'Dcv2p1SoN-U','Dc_PxlJOsbs','Dc_CBNgoovN','Dc_2QK-RZJm','DczGDbasz9-','Dcx_ep3NUJn','Dc_sS2cOn3C'
@@ -97,7 +97,7 @@
     });
   }
 
-  const batchPromise=nativeFetch('/api/instagram-batch?v=11').then(async r=>{
+  const batchPromise=nativeFetch('/api/instagram-batch?v=12').then(async r=>{
     const d=await r.json().catch(()=>({}));
     const map=new Map();
     if(r.ok&&d?.ok&&Array.isArray(d.results)){
