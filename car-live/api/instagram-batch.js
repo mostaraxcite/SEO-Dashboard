@@ -5,6 +5,7 @@ const TIMEOUT_MS=10000;
 const CACHE_SECONDS=2*24*60*60;
 const OMAR_CODE='Dcx_ep3NUJn';
 const HASAN_CODE='Dc_CBNgoovN';
+const HASAN_MAX_REEL_PAGES=8;
 
 const REELS=[
   {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/'},
@@ -29,6 +30,13 @@ function firstNum(obj,keys){
     if(n!==null) return n;
   }
   return null;
+}
+
+function firstText(...vals){
+  for(const value of vals){
+    if(value!==null&&value!==undefined&&String(value).trim()) return String(value).trim();
+  }
+  return '';
 }
 
 async function fetchJson(url,headers={}){
@@ -98,15 +106,20 @@ function findSocialCrawlReel(body,shortcode){
   return null;
 }
 
-async function socialCrawlProfileReel(meta,key){
-  if(!meta.handle) return null;
-  const q=new URLSearchParams({handle:meta.handle,trim:'true'});
-  const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/profile/reels?${q}`,{
-    'x-api-key':key,
-    'Cache-Control':'no-cache'
-  });
-  const hit=findSocialCrawlReel(body,meta.shortcode);
-  if(!hit) return {...meta,available:false,source:'socialcrawl-instagram-profile-reels',error:'Target reel not found in profile reels page'};
+function nextReelsMaxId(body){
+  return firstText(
+    body?.data?.next_max_id,
+    body?.data?.next_maxid,
+    body?.data?.max_id,
+    body?.data?.next_cursor,
+    body?.next_max_id,
+    body?.next_cursor,
+    body?.pagination?.next_max_id,
+    body?.pagination?.next_cursor
+  );
+}
+
+function normalizeProfileReelHit(hit,meta,body,pagesScanned){
   const e=hit.post?.engagement||{};
   const ext=hit.post?.ext||{};
   const normalized=result(meta,'socialcrawl-instagram-profile-reels',{
@@ -119,10 +132,45 @@ async function socialCrawlProfileReel(meta,key){
   });
   return {
     ...normalized,
+    exactShortcodeMatch:true,
+    pagesScanned,
+    matchedUrl:hit.post?.url||null,
     cached:body?.cached===true,
     creditsUsed:asNum(body?.credits_used),
     creditsRemaining:asNum(body?.credits_remaining),
     requestId:body?.request_id||null
+  };
+}
+
+async function socialCrawlProfileReel(meta,key){
+  if(!meta.handle) return null;
+  let maxId='';
+  let pagesScanned=0;
+  const seen=new Set();
+  let lastError='Target reel not found in profile reels pages';
+
+  while(pagesScanned<HASAN_MAX_REEL_PAGES){
+    const q=new URLSearchParams({handle:meta.handle,trim:'true'});
+    if(maxId) q.set('max_id',maxId);
+    const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/profile/reels?${q}`,{
+      'x-api-key':key,
+      'Cache-Control':'no-cache'
+    });
+    pagesScanned++;
+
+    const hit=findSocialCrawlReel(body,meta.shortcode);
+    if(hit) return normalizeProfileReelHit(hit,meta,body,pagesScanned);
+
+    const next=nextReelsMaxId(body);
+    if(!next||seen.has(next)) break;
+    seen.add(next);
+    maxId=next;
+    lastError=`Target reel not found after ${pagesScanned} profile reels page(s)`;
+  }
+
+  return {
+    ...meta,available:false,source:'socialcrawl-instagram-profile-reels',
+    exactShortcodeMatch:false,pagesScanned,error:lastError
   };
 }
 
@@ -242,15 +290,18 @@ export default async function handler(req,res){
 
   const provider=socialCrawlKey?'socialcrawl':(ensembleToken?'ensembledata':'socialkit-fallback');
   const results=await mapLimit(selected,3,async meta=>{
-    if(socialCrawlKey){
-      if(meta.shortcode===HASAN_CODE){
-        try{
-          const r=await socialCrawlProfileReel(meta,socialCrawlKey);
-          if(r?.available) return r;
-        }catch(_){}
-      }else{
-        try{const r=await socialCrawlStats(meta,socialCrawlKey);if(r.available)return r;}catch(_){}
+    if(meta.shortcode===HASAN_CODE&&socialCrawlKey){
+      try{
+        const exact=await socialCrawlProfileReel(meta,socialCrawlKey);
+        if(exact?.available&&exact.exactShortcodeMatch) return exact;
+        return exact||{...meta,available:false,source:'socialcrawl-instagram-profile-reels',error:'Hasan exact reel not returned'};
+      }catch(e){
+        return {...meta,available:false,source:'socialcrawl-instagram-profile-reels',error:String(e?.message||e)};
       }
+    }
+
+    if(socialCrawlKey){
+      try{const r=await socialCrawlStats(meta,socialCrawlKey);if(r.available)return r;}catch(_){}
     }
     if(ensembleToken){
       try{const r=await ensembleStats(meta,ensembleToken);if(r.available)return r;}catch(_){}
