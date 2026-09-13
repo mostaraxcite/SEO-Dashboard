@@ -1,10 +1,13 @@
 (()=>{
   const nativeFetch=window.fetch.bind(window);
-  const STORAGE_KEY='jp_instagram_last_good_v3';
+  const STORAGE_KEY='jp_instagram_last_good_v4';
   const METRIC_KEYS=['views','likes','comments','shares','saves','reach','engagement'];
   const ALL_CODES=new Set([
     'Dcv2p1SoN-U','Dc_PxlJOsbs','Dc_CBNgoovN','Dc_2QK-RZJm','DczGDbasz9-','Dcx_ep3NUJn','Dc_sS2cOn3C'
   ]);
+  const MANUAL_OVERRIDES={
+    'Dc_CBNgoovN':{views:417150,source:'manual-verified'}
+  };
 
   const SEED={
     'Dc_sS2cOn3C':{
@@ -80,6 +83,15 @@
     return true;
   }
 
+  function applyManual(target,manual){
+    for(const key of METRIC_KEYS) delete target[key];
+    target.views=Number(manual.views);
+    target.available=true;
+    target.source=manual.source||'manual-verified';
+    target.manual=true;
+    return true;
+  }
+
   function shortcodeFromPost(post){
     return String(post?.url||'').match(/\/(?:reel|p|tv)\/([^/?#]+)/i)?.[1]||'';
   }
@@ -121,8 +133,8 @@
   function loadBatch(force=false){
     if(!force&&currentBatchPromise) return currentBatchPromise;
     const url=force
-      ? `/api/instagram-batch?v=14&force=1&t=${Date.now()}`
-      : '/api/instagram-batch?v=14';
+      ? `/api/instagram-batch?v=15&force=1&t=${Date.now()}`
+      : '/api/instagram-batch?v=15';
     const promise=nativeFetch(url,{cache:force?'no-store':'default'}).then(async r=>{
       const d=await r.json().catch(()=>({}));
       const map=new Map();
@@ -130,6 +142,7 @@
         for(const item of d.results){
           if(!item?.shortcode||!trustworthy(item)) continue;
           const code=String(item.shortcode);
+          if(MANUAL_OVERRIDES[code]) continue;
           const merged=saveGood(code,{...item,updatedAt:d.updatedAt});
           if(merged) map.set(code,merged);
         }
@@ -140,7 +153,6 @@
     return promise;
   }
 
-  // Prime the normal 2-day cached batch once on page load.
   loadBatch(false);
 
   window.fetch=async(input,init)=>{
@@ -161,6 +173,11 @@
           const code=shortcodeFromPost(post);
           if(!ALL_CODES.has(code)) continue;
 
+          const manual=MANUAL_OVERRIDES[code];
+          if(manual){
+            applyManual(post,manual);changed=true;continue;
+          }
+
           const fresh=batch?.map?.get(code);
           if(fresh&&completeCore(fresh)){
             applyGood(post,fresh);changed=true;continue;
@@ -171,7 +188,6 @@
             applyGood(post,saved);changed=true;continue;
           }
 
-          // Do not show a misleading views-only Instagram row as if it were complete data.
           for(const key of METRIC_KEYS) delete post[key];
           post.available=false;
           post.source='instagram-incomplete';
@@ -184,6 +200,15 @@
     if(!url.includes('/api/instagram-public')) return nativeFetch(input,init);
 
     const code=shortcodeFromRequest(url);
+    if(code&&MANUAL_OVERRIDES[code]){
+      const manual=MANUAL_OVERRIDES[code];
+      return jsonResponse({
+        ok:true,available:true,shortcode:code,views:Number(manual.views),
+        likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,
+        source:manual.source||'manual-verified',manual:true
+      },manual.source||'manual-verified');
+    }
+
     if(code&&ALL_CODES.has(code)){
       const batch=await loadBatch(false);
       const fresh=batch?.map?.get(code);
