@@ -4,6 +4,9 @@ const SOCIALKIT_API='https://api.socialkit.dev';
 const TIMEOUT_MS=10000;
 const CACHE_SECONDS=2*24*60*60;
 const UPDATE_DAYS=2;
+const MANUAL_OVERRIDES={
+  'Dc_CBNgoovN':{views:417150,source:'manual-verified'}
+};
 
 const REELS=[
   {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/',handle:'raidalreda'},
@@ -219,6 +222,14 @@ export default async function handler(req,res){
 
   const provider=socialCrawlKey?'socialcrawl-profile-reels':(ensembleToken?'ensembledata':'socialkit-fallback');
   const results=await mapLimit(selected,3,async meta=>{
+    const manual=MANUAL_OVERRIDES[meta.shortcode];
+    if(manual){
+      return {
+        ...meta,views:manual.views,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,
+        available:true,coreComplete:true,suspicious:false,source:manual.source,manual:true,creditsUsed:0
+      };
+    }
+
     if(socialCrawlKey){
       try{
         const reel=await socialCrawlProfileReel(meta,socialCrawlKey,force);
@@ -245,7 +256,9 @@ export default async function handler(req,res){
   const complete=results.filter(x=>x.coreComplete).length;
   const socialCrawlCreditsUsed=results.reduce((sum,x)=>sum+(String(x.source||'').startsWith('socialcrawl-')?(asNum(x.creditsUsed)||0):0),0);
   const updatesPer30Days=Math.ceil(30/UPDATE_DAYS);
-  const estimatedMonthlyCredits=REELS.length*updatesPer30Days;
+  const automatedReels=REELS.filter(x=>!MANUAL_OVERRIDES[x.shortcode]).length;
+  const selectedAutomated=selected.filter(x=>!MANUAL_OVERRIDES[x.shortcode]).length;
+  const estimatedMonthlyCredits=automatedReels*updatesPer30Days;
 
   // Never freeze an incomplete/error batch for two days. A recharge or temporary provider recovery should appear immediately.
   if(force||complete<selected.length){
@@ -257,7 +270,7 @@ export default async function handler(req,res){
   res.status(200).json({
     ok:true,provider,successful,complete,total:selected.length,
     socialCrawlCreditsUsed,
-    socialCrawlCreditsPerFullRefresh:socialCrawlKey?selected.length:null,
+    socialCrawlCreditsPerFullRefresh:socialCrawlKey?selectedAutomated:null,
     estimatedMonthlyCredits:socialCrawlKey?estimatedMonthlyCredits:null,
     cacheDays:UPDATE_DAYS,
     results,updatedAt:new Date().toISOString()
