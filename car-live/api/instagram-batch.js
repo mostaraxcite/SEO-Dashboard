@@ -6,13 +6,13 @@ const CACHE_SECONDS=2*24*60*60;
 const UPDATE_DAYS=2;
 
 const REELS=[
-  {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/'},
-  {shortcode:'Dc_PxlJOsbs',url:'https://www.instagram.com/haneen_jeddah8_/reel/Dc_PxlJOsbs/'},
-  {shortcode:'Dc_CBNgoovN',url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/'},
-  {shortcode:'Dc_2QK-RZJm',url:'https://www.instagram.com/jeddah_for_all2/reel/Dc_2QK-RZJm/'},
-  {shortcode:'DczGDbasz9-',url:'https://www.instagram.com/wo555_/reel/DczGDbasz9-/'},
-  {shortcode:'Dcx_ep3NUJn',url:'https://www.instagram.com/omarrating/reel/Dcx_ep3NUJn/'},
-  {shortcode:'Dc_sS2cOn3C',url:'https://www.instagram.com/jeddah_briefly/reel/Dc_sS2cOn3C/'}
+  {shortcode:'Dcv2p1SoN-U',url:'https://www.instagram.com/raidalreda/reel/Dcv2p1SoN-U/',handle:'raidalreda'},
+  {shortcode:'Dc_PxlJOsbs',url:'https://www.instagram.com/haneen_jeddah8_/reel/Dc_PxlJOsbs/',handle:'haneen_jeddah8_'},
+  {shortcode:'Dc_CBNgoovN',url:'https://www.instagram.com/r.5i9/reel/Dc_CBNgoovN/',handle:'r.5i9'},
+  {shortcode:'Dc_2QK-RZJm',url:'https://www.instagram.com/jeddah_for_all2/reel/Dc_2QK-RZJm/',handle:'jeddah_for_all2'},
+  {shortcode:'DczGDbasz9-',url:'https://www.instagram.com/wo555_/reel/DczGDbasz9-/',handle:'wo555_'},
+  {shortcode:'Dcx_ep3NUJn',url:'https://www.instagram.com/omarrating/reel/Dcx_ep3NUJn/',handle:'omarrating'},
+  {shortcode:'Dc_sS2cOn3C',url:'https://www.instagram.com/jeddah_briefly/reel/Dc_sS2cOn3C/',handle:'jeddah_briefly'}
 ];
 
 function asNum(v){
@@ -50,28 +50,35 @@ function normalizedResult(meta,source,{views=null,likes=null,comments=null,share
   const parts=[likes,comments,shares,saves].filter(Number.isFinite);
   const engagement=parts.length?parts.reduce((a,b)=>a+b,0):null;
   const suspicious=Number.isFinite(views)&&views<=5&&[likes,comments,shares,saves].every(v=>v===null||v===0);
+  const coreComplete=Number.isFinite(views)&&Number.isFinite(likes)&&Number.isFinite(comments);
   return {
-    ...meta,views,likes,comments,shares,saves,reach,engagement,
+    ...meta,views,likes,comments,shares,saves,reach,engagement,coreComplete,
     available:!suspicious&&[views,likes,comments,shares,saves,reach].some(Number.isFinite),
     suspicious,source
   };
 }
 
-function normalizeSocialCrawlPost(body,meta){
-  const post=body?.data?.post||body?.post||body?.data||{};
-  const engagement=post?.engagement||body?.data?.engagement||{};
-  const computed=post?.computed||body?.data?.computed||{};
+function postCode(post){
+  if(!post||typeof post!=='object') return '';
+  if(post.shortcode) return String(post.shortcode);
+  if(post.code) return String(post.code);
+  const url=String(post.url||post.permalink||post.link||'');
+  return url.match(/\/(?:reel|p|tv)\/([^/?#]+)/i)?.[1]||'';
+}
+
+function normalizeUnifiedPost(post,meta,source,body,computed=null){
+  const engagement=post?.engagement||{};
   const ext=post?.ext||{};
+  const result=normalizedResult(meta,source,{
+    views:asNum(engagement.views??post?.views??ext.ig_play_count??ext.play_count),
+    likes:asNum(engagement.likes??post?.likes),
+    comments:asNum(engagement.comments??post?.comments),
+    shares:asNum(engagement.shares??post?.shares),
+    saves:asNum(engagement.saves??post?.saves),
+    reach:asNum(computed?.estimated_reach)
+  });
   return {
-    ...normalizedResult(meta,'socialcrawl-instagram-post',{
-      views:asNum(engagement?.views??post?.views??ext?.ig_play_count??ext?.play_count),
-      likes:asNum(engagement?.likes??post?.likes),
-      comments:asNum(engagement?.comments??post?.comments),
-      // Standard /instagram/post intentionally does not request the expensive share-count source.
-      shares:null,
-      saves:null,
-      reach:asNum(computed?.estimated_reach)
-    }),
+    ...result,
     cached:body?.cached===true,
     creditsUsed:asNum(body?.credits_used),
     creditsRemaining:asNum(body?.credits_remaining),
@@ -79,10 +86,34 @@ function normalizeSocialCrawlPost(body,meta){
   };
 }
 
-async function socialCrawlPost(meta,key){
+function findReelItem(body,shortcode){
+  const items=body?.data?.items||body?.items||[];
+  if(!Array.isArray(items)) return null;
+  for(const item of items){
+    const post=item?.post||item;
+    if(postCode(post)===shortcode) return {post,computed:item?.computed||post?.computed||null};
+  }
+  return null;
+}
+
+async function socialCrawlProfileReel(meta,key,force=false){
+  const q=new URLSearchParams({handle:meta.handle,trim:'true'});
+  const headers={'x-api-key':key};
+  if(force) headers['Cache-Control']='no-cache';
+  const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/profile/reels?${q}`,headers);
+  const hit=findReelItem(body,meta.shortcode);
+  if(!hit) return {...meta,available:false,coreComplete:false,source:'socialcrawl-instagram-profile-reels',error:'Target reel not found on first profile reels page'};
+  return normalizeUnifiedPost(hit.post,meta,'socialcrawl-instagram-profile-reels',body,hit.computed);
+}
+
+async function socialCrawlPost(meta,key,force=false){
   const q=new URLSearchParams({url:meta.url,trim:'true'});
-  const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/post?${q}`,{'x-api-key':key});
-  return normalizeSocialCrawlPost(body,meta);
+  const headers={'x-api-key':key};
+  if(force) headers['Cache-Control']='no-cache';
+  const body=await fetchJson(`${SOCIALCRAWL_API}/instagram/post?${q}`,headers);
+  const post=body?.data?.post||body?.post||body?.data||{};
+  const computed=body?.data?.computed||post?.computed||null;
+  return normalizeUnifiedPost(post,meta,'socialcrawl-instagram-post',body,computed);
 }
 
 function nodeCode(node){
@@ -162,7 +193,7 @@ async function mapLimit(items,limit,worker){
     for(;;){
       const i=next++;if(i>=items.length)return;
       try{out[i]=await worker(items[i]);}
-      catch(e){out[i]={...items[i],available:false,error:String(e?.message||e),source:'instagram-provider-unavailable'};}
+      catch(e){out[i]={...items[i],available:false,coreComplete:false,error:String(e?.message||e),source:'instagram-provider-unavailable'};}
     }
   }
   await Promise.all(Array.from({length:Math.min(limit,items.length||1)},run));
@@ -181,43 +212,54 @@ export default async function handler(req,res){
     res.status(503).json({ok:false,error:'No Instagram data provider is configured'});return;
   }
 
+  const force=String(req.query?.force||'')==='1';
   const requested=String(req.query?.shortcode||'').trim();
   const selected=requested?REELS.filter(x=>x.shortcode===requested):REELS;
   if(requested&&!selected.length){res.status(404).json({ok:false,error:'Unknown Instagram shortcode'});return;}
 
-  const provider=socialCrawlKey?'socialcrawl-post':(ensembleToken?'ensembledata':'socialkit-fallback');
+  const provider=socialCrawlKey?'socialcrawl-profile-reels':(ensembleToken?'ensembledata':'socialkit-fallback');
   const results=await mapLimit(selected,3,async meta=>{
-    // Cheapest trustworthy path: one SocialCrawl /instagram/post request per reel (1 credit).
     if(socialCrawlKey){
       try{
-        const r=await socialCrawlPost(meta,socialCrawlKey);
-        if(r.available) return r;
-      }catch(e){
-        // Fall through only when the primary provider is unavailable; do not retry another SocialCrawl endpoint.
-      }
+        const reel=await socialCrawlProfileReel(meta,socialCrawlKey,force);
+        if(reel.coreComplete) return reel;
+      }catch(_){}
+      try{
+        const post=await socialCrawlPost(meta,socialCrawlKey,force);
+        if(post.available) return post;
+      }catch(_){}
+      // When SocialCrawl is configured, do not mix in older providers that previously produced wrong counters.
+      return {...meta,available:false,coreComplete:false,error:'SocialCrawl returned no trustworthy counters',source:'socialcrawl-unavailable'};
     }
+
     if(ensembleToken){
       try{const r=await ensembleStats(meta,ensembleToken);if(r.available)return r;}catch(_){}
     }
     if(socialKitKey){
       try{const r=await socialKitStats(meta,socialKitKey);if(r.available)return r;}catch(_){}
     }
-    return {...meta,available:false,error:'No trustworthy Instagram counters returned',source:'instagram-unavailable'};
+    return {...meta,available:false,coreComplete:false,error:'No trustworthy Instagram counters returned',source:'instagram-unavailable'};
   });
 
   const successful=results.filter(x=>x.available).length;
-  const socialCrawlCreditsUsed=results.reduce((sum,x)=>sum+(x.source==='socialcrawl-instagram-post'?(asNum(x.creditsUsed)||0):0),0);
+  const complete=results.filter(x=>x.coreComplete).length;
+  const socialCrawlCreditsUsed=results.reduce((sum,x)=>sum+(String(x.source||'').startsWith('socialcrawl-')?(asNum(x.creditsUsed)||0):0),0);
   const updatesPer30Days=Math.ceil(30/UPDATE_DAYS);
   const estimatedMonthlyCredits=REELS.length*updatesPer30Days;
 
-  res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=86400`);
+  // Never freeze an incomplete/error batch for two days. A recharge or temporary provider recovery should appear immediately.
+  if(force||complete<selected.length){
+    res.setHeader('Cache-Control','private, no-store, max-age=0');
+  }else{
+    res.setHeader('Cache-Control',`public, max-age=0, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=86400`);
+  }
+
   res.status(200).json({
-    ok:true,provider,successful,total:selected.length,
+    ok:true,provider,successful,complete,total:selected.length,
     socialCrawlCreditsUsed,
     socialCrawlCreditsPerFullRefresh:socialCrawlKey?selected.length:null,
     estimatedMonthlyCredits:socialCrawlKey?estimatedMonthlyCredits:null,
     cacheDays:UPDATE_DAYS,
-    sharesRefresh:'disabled-on-routine-refresh-to-save-credits',
     results,updatedAt:new Date().toISOString()
   });
 }
