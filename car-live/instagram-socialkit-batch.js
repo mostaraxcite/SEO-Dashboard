@@ -1,6 +1,6 @@
 (()=>{
   const nativeFetch=window.fetch.bind(window);
-  const STORAGE_KEY='jp_instagram_last_good_v2';
+  const STORAGE_KEY='jp_instagram_last_good_v3';
   const METRIC_KEYS=['views','likes','comments','shares','saves','reach','engagement'];
   const ALL_CODES=new Set([
     'Dcv2p1SoN-U','Dc_PxlJOsbs','Dc_CBNgoovN','Dc_2QK-RZJm','DczGDbasz9-','Dcx_ep3NUJn','Dc_sS2cOn3C'
@@ -9,7 +9,7 @@
   const SEED={
     'Dc_sS2cOn3C':{
       views:5112,likes:58,comments:14,shares:0,saves:0,reach:null,engagement:72,
-      source:'last-known-good-socialkit',updatedAt:'2026-09-09T00:00:00.000Z'
+      coreComplete:true,source:'last-known-good-socialkit',updatedAt:'2026-09-09T00:00:00.000Z'
     }
   };
 
@@ -30,11 +30,15 @@
     return [obj.views,obj.likes,obj.comments,obj.shares,obj.saves].some(finite);
   }
 
+  function completeCore(obj){
+    return finite(obj?.views)&&finite(obj?.likes)&&finite(obj?.comments);
+  }
+
   function readStore(){
     let parsed={};
     try{parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(_){}
     for(const [code,value] of Object.entries(SEED)){
-      if(!trustworthy(parsed[code])) parsed[code]=value;
+      if(!completeCore(parsed[code])) parsed[code]=value;
     }
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(parsed));}catch(_){}
     return parsed;
@@ -44,8 +48,15 @@
 
   function saveGood(code,obj){
     if(!code||!trustworthy(obj)) return null;
+    const socialCrawl=String(obj.source||'').startsWith('socialcrawl-');
+    if(socialCrawl&&!completeCore(obj)) return null;
+
     const previous=store[code]||{};
-    const saved={source:obj.source||previous.source||'instagram-provider',updatedAt:obj.updatedAt||new Date().toISOString()};
+    const saved={
+      source:obj.source||previous.source||'instagram-provider',
+      updatedAt:obj.updatedAt||new Date().toISOString(),
+      coreComplete:completeCore(obj)
+    };
     for(const key of METRIC_KEYS){
       if(finite(obj[key])) saved[key]=Number(obj[key]);
       else if(finite(previous[key])) saved[key]=Number(previous[key]);
@@ -105,26 +116,39 @@
     });
   }
 
-  const batchPromise=nativeFetch('/api/instagram-batch?v=13').then(async r=>{
-    const d=await r.json().catch(()=>({}));
-    const map=new Map();
-    if(r.ok&&d?.ok&&Array.isArray(d.results)){
-      for(const item of d.results){
-        if(item?.shortcode&&trustworthy(item)){
+  let currentBatchPromise=null;
+
+  function loadBatch(force=false){
+    if(!force&&currentBatchPromise) return currentBatchPromise;
+    const url=force
+      ? `/api/instagram-batch?v=14&force=1&t=${Date.now()}`
+      : '/api/instagram-batch?v=14';
+    const promise=nativeFetch(url,{cache:force?'no-store':'default'}).then(async r=>{
+      const d=await r.json().catch(()=>({}));
+      const map=new Map();
+      if(r.ok&&d?.ok&&Array.isArray(d.results)){
+        for(const item of d.results){
+          if(!item?.shortcode||!trustworthy(item)) continue;
           const code=String(item.shortcode);
           const merged=saveGood(code,{...item,updatedAt:d.updatedAt});
-          map.set(code,merged||item);
+          if(merged) map.set(code,merged);
         }
       }
-    }
-    return {map,meta:d||{}};
-  }).catch(()=>({map:new Map(),meta:{}}));
+      return {map,meta:d||{}};
+    }).catch(()=>({map:new Map(),meta:{}}));
+    currentBatchPromise=promise;
+    return promise;
+  }
+
+  // Prime the normal 2-day cached batch once on page load.
+  loadBatch(false);
 
   window.fetch=async(input,init)=>{
     const url=typeof input==='string'?input:(input&&typeof input.url==='string'?input.url:'');
 
     if(url.includes('/api/influencers')){
-      const [response,batch]=await Promise.all([nativeFetch(input,init),batchPromise]);
+      const force=/[?&]t=\d+/.test(url)||/[?&]force=1/.test(url);
+      const [response,batch]=await Promise.all([nativeFetch(input,init),loadBatch(force)]);
       if(!response.ok) return response;
       const data=await response.clone().json().catch(()=>null);
       if(!data?.ok||!Array.isArray(data.influencers)) return response;
@@ -138,21 +162,20 @@
           if(!ALL_CODES.has(code)) continue;
 
           const fresh=batch?.map?.get(code);
-          if(trustworthy(fresh)){
+          if(fresh&&completeCore(fresh)){
             applyGood(post,fresh);changed=true;continue;
           }
 
           const saved=store[code];
-          if(trustworthy(saved)){
+          if(saved&&completeCore(saved)){
             applyGood(post,saved);changed=true;continue;
           }
 
-          if(suspicious(post)){
-            for(const key of METRIC_KEYS) delete post[key];
-            post.available=false;
-            post.source='instagram-suspicious-filter';
-            changed=true;
-          }
+          // Do not show a misleading views-only Instagram row as if it were complete data.
+          for(const key of METRIC_KEYS) delete post[key];
+          post.available=false;
+          post.source='instagram-incomplete';
+          changed=true;
         }
       }
       return changed?responseWithJson(response,data):response;
@@ -162,10 +185,10 @@
 
     const code=shortcodeFromRequest(url);
     if(code&&ALL_CODES.has(code)){
-      const batch=await batchPromise;
+      const batch=await loadBatch(false);
       const fresh=batch?.map?.get(code);
-      const best=trustworthy(fresh)?fresh:store[code];
-      if(trustworthy(best)){
+      const best=fresh&&completeCore(fresh)?fresh:store[code];
+      if(best&&completeCore(best)){
         return jsonResponse({
           ok:true,available:true,shortcode:code,
           views:finite(best.views)?Number(best.views):null,
@@ -181,18 +204,6 @@
       }
     }
 
-    const response=await nativeFetch(input,init);
-    if(!response.ok) return response;
-    const data=await response.clone().json().catch(()=>null);
-    if(data?.ok&&data?.available&&suspicious(data)){
-      return jsonResponse({
-        ok:true,available:false,shortcode:code,
-        views:null,likes:null,comments:null,shares:null,saves:null,reach:null,engagement:null,
-        source:'instagram-suspicious-filter',
-        note:'Rejected an implausible Instagram fallback counter.'
-      },'instagram-suspicious-filter');
-    }
-    if(data?.ok&&data?.available&&trustworthy(data)) saveGood(code,data);
-    return response;
+    return nativeFetch(input,init);
   };
 })();
