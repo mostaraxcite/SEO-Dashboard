@@ -35,7 +35,6 @@
     const platformCell=marker?.closest('td');
     if(!platformCell) return null;
     let cell=platformCell.nextElementSibling;
-    // Before the UI-condensing script runs, the links column sits here and is not numeric.
     if(cell&&!cell.classList.contains('i-num')) cell=cell.nextElementSibling;
     const names=['views','reach','likes','comments','shares','saves','engagement'];
     const out={};
@@ -189,7 +188,6 @@
     applying=true;
     try{
       updateModeNote(body);
-      // Capture the untouched All state before doing any subtraction.
       body.querySelectorAll('.influencers-table tbody tr').forEach(tr=>metricCells(tr));
       body.querySelectorAll('.influencers-stat .i-value, .influencers-table td[rowspan].i-num').forEach(remember);
       restore(body);
@@ -205,7 +203,10 @@
   document.addEventListener('click',e=>{
     if(e.target?.closest?.('.influencers-mode')) setTimeout(sync,0);
   });
-  const observer=new MutationObserver(()=>setTimeout(sync,0));
+  const observer=new MutationObserver(mutations=>{
+    const structural=mutations.some(m=>m.type==='attributes'||[...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1));
+    if(structural) setTimeout(sync,0);
+  });
   observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,0),{once:true});
   else setTimeout(sync,0);
