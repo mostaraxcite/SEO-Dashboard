@@ -14,7 +14,6 @@
   }
 
   function fmt(v){return Number.isFinite(v)?NF.format(Math.round(v)):'—';}
-  function rate(v){return Number.isFinite(v)?`${RATE.format(v)} ر.س`:'—';}
   function pct(v){return Number.isFinite(v)?`${PCT.format(v*100)}%`:'—';}
   function clamp(v){return Number.isFinite(v)?Math.max(0,v):null;}
 
@@ -109,32 +108,21 @@
     }
   }
 
-  function recomputeCreatorEfficiency(body){
+  function zeroOrganicCosts(body){
     const table=body.querySelector('.influencers-table');
     if(!table) return;
-    const rows=[...table.querySelectorAll('tbody tr')];
-    for(let i=0;i<rows.length;i++){
-      const tr=rows[i];
+    for(const tr of table.querySelectorAll('tbody tr')){
       const nameCell=tr.querySelector('.influencer-name')?.closest('td');
       if(!nameCell) continue;
-      const span=Math.max(1,Number(nameCell.getAttribute('rowspan'))||1);
-      const group=rows.slice(i,i+span);
       const rowspanNums=[...tr.querySelectorAll('td[rowspan].i-num')];
       if(rowspanNums.length<3) continue;
-      const costCell=rowspanNums[0], cpvCell=rowspanNums[rowspanNums.length-2], cpeCell=rowspanNums[rowspanNums.length-1];
+      const costCell=rowspanNums[0];
+      const cpvCell=rowspanNums[rowspanNums.length-2];
+      const cpeCell=rowspanNums[rowspanNums.length-1];
       remember(costCell);remember(cpvCell);remember(cpeCell);
-      const cost=parseNumber(costCell.dataset.organicAllText);
-      let views=0,engagement=0,hasViews=false,hasEngagement=false;
-      for(const row of group){
-        const cells=metricCells(row);
-        if(!cells) continue;
-        const v=parseNumber(cells.views?.textContent);
-        const e=parseNumber(cells.engagement?.textContent);
-        if(Number.isFinite(v)){views+=v;hasViews=true;}
-        if(Number.isFinite(e)){engagement+=e;hasEngagement=true;}
-      }
-      cpvCell.textContent=Number.isFinite(cost)&&hasViews&&views>0?rate(cost/views):'—';
-      cpeCell.textContent=Number.isFinite(cost)&&hasEngagement&&engagement>0?rate(cost/engagement):'—';
+      costCell.textContent='0 ر.س';
+      cpvCell.textContent='—';
+      cpeCell.textContent='—';
     }
   }
 
@@ -155,18 +143,14 @@
       if(Number.isFinite(e)){engagement+=e;hasEngagement=true;}
     }
 
-    const costCard=card(body,'إجمالي التكلفة');
-    const costValue=costCard?.querySelector('.i-value');
-    if(costValue) remember(costValue);
-    const cost=parseNumber(costValue?.dataset.organicAllText||costValue?.textContent);
-
     const updates={
+      'إجمالي التكلفة':'0 ر.س',
       'إجمالي المشاهدات':hasViews?fmt(views):'—',
       'إجمالي الوصول':hasReach?fmt(reach):'—',
       'إجمالي التفاعل':hasEngagement?fmt(engagement):'—',
       'معدل التفاعل':hasViews&&views>0&&hasEngagement?pct(engagement/views):'—',
-      'CPV':Number.isFinite(cost)&&hasViews&&views>0?rate(cost/views):'—',
-      'CPE':Number.isFinite(cost)&&hasEngagement&&engagement>0?rate(cost/engagement):'—'
+      'CPV':'—',
+      'CPE':'—'
     };
     for(const [label,text] of Object.entries(updates)){
       const value=card(body,label)?.querySelector('.i-value');
@@ -178,7 +162,7 @@
     const modes=body.querySelector('.influencers-performance-modes');
     if(!modes) return;
     const labels=[...modes.querySelectorAll('.mode-label')];
-    if(labels.length>1) labels[1].textContent='Paid = TikTok Ads عبر Supermetrics · Organic = إجمالي TikTok العام − المدفوع';
+    if(labels.length>1) labels[1].textContent='Paid = TikTok Ads عبر Supermetrics · Organic = إجمالي TikTok العام − المدفوع · بدون إنفاق إعلاني';
   }
 
   function sync(){
@@ -194,7 +178,7 @@
       const mode=body.querySelector('.influencers-mode.active')?.dataset.mode||'all';
       if(mode==='organic'){
         applyOrganicRows(body);
-        recomputeCreatorEfficiency(body);
+        zeroOrganicCosts(body);
         recomputeSummary(body);
       }
     }finally{applying=false;}
