@@ -1,7 +1,12 @@
 (()=>{
   const previousFetch=window.fetch.bind(window);
-  const CATEGORY_OVERRIDES={ohoud:'Mega',wejdan:'Mega','taghtiyat-abha':'Micro'};
+  const CATEGORY_OVERRIDES={ohoud:'Micro',wejdan:'Micro','taghtiyat-abha':'Micro'};
+  const URL_OVERRIDES={
+    ohoud:'https://www.tiktok.com/@oudii.mm/video/7685725638376066325?_r=1&_t=ZS-99kkYmbMbtF',
+    wejdan:'https://www.tiktok.com/@wjdan19955/video/7685663591214615828?_r=1&_t=ZS-99kQFVoaSyz'
+  };
   const TARGET_IDS=new Set(Object.keys(CATEGORY_OVERRIDES));
+  const FORCE_REFRESH_IDS=new Set(['ohoud','wejdan']);
   const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
   const num=v=>finite(v)?Number(v):null;
 
@@ -39,9 +44,20 @@
     return Number.isFinite(cost)&&Number.isFinite(value)&&value>0?cost/value:null;
   }
 
+  function applyOverrides(item){
+    if(!item) return;
+    if(CATEGORY_OVERRIDES[item.id]) item.category=CATEGORY_OVERRIDES[item.id];
+    const url=URL_OVERRIDES[item.id];
+    if(url){
+      item.urls=[url];
+      const posts=(item.posts||[]).filter(p=>p?.platform==='tiktok');
+      for(const post of posts) post.url=url;
+    }
+  }
+
   function recalc(data){
     for(const item of data.influencers||[]){
-      if(CATEGORY_OVERRIDES[item.id]) item.category=CATEGORY_OVERRIDES[item.id];
+      applyOverrides(item);
       item.metrics=aggregate(item.posts||[]);
       item.cpv=rate(item.cost,item.metrics.views);
       item.cpe=rate(item.cost,item.metrics.engagement);
@@ -75,15 +91,16 @@
     for(const key of ['views','likes','comments','shares','saves','reach','engagement']){
       if(finite(supp[key])) post[key]=Number(supp[key]);
     }
-    post.url=supp.url||post.url||supp.originalUrl||null;
+    post.url=URL_OVERRIDES[item.id]||supp.originalUrl||supp.url||post.url||null;
     post.available=true;
     post.source='socialcrawl-tiktok-post';
+    applyOverrides(item);
   }
 
   function responseWithJson(original,data){
     const headers=new Headers(original.headers);
     headers.set('Content-Type','application/json');
-    headers.set('X-New-Influencers-Patch','1');
+    headers.set('X-New-Influencers-Patch','2');
     return new Response(JSON.stringify(data),{status:original.status,statusText:original.statusText,headers});
   }
 
@@ -95,18 +112,16 @@
     const data=await response.clone().json().catch(()=>null);
     if(!data?.ok||!Array.isArray(data.influencers)) return response;
 
-    for(const item of data.influencers){
-      if(CATEGORY_OVERRIDES[item.id]) item.category=CATEGORY_OVERRIDES[item.id];
-    }
+    for(const item of data.influencers) applyOverrides(item);
 
     const missing=data.influencers
       .filter(i=>TARGET_IDS.has(i.id))
-      .filter(i=>!(i.posts||[]).some(p=>p?.platform==='tiktok'&&hasMetrics(p)))
+      .filter(i=>FORCE_REFRESH_IDS.has(i.id)||!(i.posts||[]).some(p=>p?.platform==='tiktok'&&hasMetrics(p)))
       .map(i=>i.id);
 
     if(missing.length){
       try{
-        const q=new URLSearchParams({ids:missing.join(',')});
+        const q=new URLSearchParams({ids:missing.join(','),v:'20260917-2'});
         const r=await previousFetch(`/api/new-influencers-tiktok?${q}`,{cache:'default'});
         const supplement=await r.json().catch(()=>({}));
         if(r.ok&&supplement?.ok&&Array.isArray(supplement.results)){
