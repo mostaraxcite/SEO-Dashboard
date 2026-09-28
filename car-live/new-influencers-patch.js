@@ -1,12 +1,12 @@
 (()=>{
   const previousFetch=window.fetch.bind(window);
-  const CATEGORY_OVERRIDES={ohoud:'Micro',wejdan:'Micro','taghtiyat-abha':'Micro'};
+  const CATEGORY_OVERRIDES={'abu-hatem':'Micro',ohoud:'Micro',wejdan:'Micro','taghtiyat-abha':'Micro'};
   const URL_OVERRIDES={
     ohoud:'https://www.tiktok.com/@oudii.mm/video/7685725638376066325?_r=1&_t=ZS-99kkYmbMbtF',
     wejdan:'https://www.tiktok.com/@wjdan19955/video/7685663591214615828?_r=1&_t=ZS-99kQFVoaSyz'
   };
   const TARGET_IDS=new Set(Object.keys(CATEGORY_OVERRIDES));
-  const FORCE_REFRESH_IDS=new Set(['ohoud','wejdan']);
+  const FORCE_REFRESH_IDS=new Set(['abu-hatem','ohoud','wejdan']);
   const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
   const num=v=>finite(v)?Number(v):null;
 
@@ -121,7 +121,7 @@
 
     if(missing.length){
       try{
-        const q=new URLSearchParams({ids:missing.join(','),v:'20260917-2'});
+        const q=new URLSearchParams({ids:missing.join(','),v:'20260928-3'});
         const r=await previousFetch(`/api/new-influencers-tiktok?${q}`,{cache:'default'});
         const supplement=await r.json().catch(()=>({}));
         if(r.ok&&supplement?.ok&&Array.isArray(supplement.results)){
