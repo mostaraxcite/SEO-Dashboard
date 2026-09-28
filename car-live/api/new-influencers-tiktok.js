@@ -3,6 +3,7 @@ const CACHE_SECONDS=43200; // 12 hours
 const TIMEOUT_MS=9000;
 
 const TARGETS={
+  'abu-hatem':{id:'abu-hatem',name:'Abu hatem',category:'Micro',url:'https://vt.tiktok.com/ZSgpmQgEa/'},
   ohoud:{id:'ohoud',name:'Ohoud',category:'Micro',url:'https://www.tiktok.com/@oudii.mm/video/7685725638376066325?_r=1&_t=ZS-99kkYmbMbtF'},
   wejdan:{id:'wejdan',name:'Wejdan',category:'Micro',url:'https://www.tiktok.com/@wjdan19955/video/7685663591214615828?_r=1&_t=ZS-99kQFVoaSyz'},
   'taghtiyat-abha':{id:'taghtiyat-abha',name:'Taghtiyat Abha',category:'Micro',url:'https://vt.tiktok.com/ZSqbrAuCc/'}
