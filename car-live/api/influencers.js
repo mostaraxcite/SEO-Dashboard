@@ -100,6 +100,10 @@ const INFLUENCERS=[
     urls:['https://www.instagram.com/jeddah_briefly/reel/Dc_sS2cOn3C/']
   },
   {
+    id:'abu-hatem',name:'Abu hatem',cost:15525,platform:'تيك توك',category:'Micro',
+    urls:['https://vt.tiktok.com/ZSgpmQgEa/']
+  },
+  {
     id:'ohoud',name:'Ohoud',cost:1500,platform:'تيك توك',category:'Micro',
     urls:['https://vt.tiktok.com/ZSg46JvFL/']
   },
