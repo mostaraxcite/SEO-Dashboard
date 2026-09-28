@@ -100,15 +100,15 @@ const INFLUENCERS=[
     urls:['https://www.instagram.com/jeddah_briefly/reel/Dc_sS2cOn3C/']
   },
   {
-    id:'ohoud',name:'Ohoud',cost:null,platform:'تيك توك',category:'Micro',
+    id:'ohoud',name:'Ohoud',cost:1500,platform:'تيك توك',category:'Micro',
     urls:['https://vt.tiktok.com/ZSg46JvFL/']
   },
   {
-    id:'wejdan',name:'Wejdan',cost:null,platform:'تيك توك',category:'Micro',
+    id:'wejdan',name:'Wejdan',cost:1300,platform:'تيك توك',category:'Micro',
     urls:['https://vt.tiktok.com/ZSgQXWxt6/']
   },
   {
-    id:'taghtiyat-abha',name:'Taghtiyat Abha',cost:null,platform:'تيك توك',category:'Micro',
+    id:'taghtiyat-abha',name:'Taghtiyat Abha',cost:3300,platform:'تيك توك',category:'Micro',
     urls:['https://vt.tiktok.com/ZSqbrAuCc/']
   }
 ];
