@@ -3,10 +3,6 @@ const CUR={Meta:'USD',Snapchat:'USD',TikTok:'SAR',Google:'USD',LinkedIn:'SAR',Pi
 const ACTION={Meta:'Link clicks',Snapchat:'Swipes',TikTok:'Clicks',Google:'Clicks',LinkedIn:'Clicks',Pinterest:'Pin clicks',X:'Link clicks'};
 const COL={Meta:'#1877F2',Snapchat:'#f4d817',TikTok:'#111',Google:'#4285F4',LinkedIn:'#0A66C2',Pinterest:'#E60023',X:'#000'};
 const CPM_BENCHMARK=5.00;
-const SAR_PER_USD=3.75;
-const BMW_WHATSAPP_COST_SAR=61056.20;
-const BMW_SMS_COST_SAR=11109.72;
-const BMW_MESSAGING_COST_SAR=BMW_WHATSAPP_COST_SAR+BMW_SMS_COST_SAR;
 const TAG_STORAGE_KEY='jazeeraCampaignTagsV1';
 const currentYear=new Date().getFullYear();
 const DEFAULT_START=`${currentYear}-01-01`;
@@ -312,134 +308,7 @@ function renderPayload(p){
   const bestCtr=[...good].filter(d=>Number.isFinite(d.ctr)&&d.ims>0).sort((a,b)=>b.ctr-a.ctr)[0];
 
   document.getElementById('badgeSpend').textContent=bad.length?'PARTIAL':'LIVE';
-  const spendEl=document.getElementById('kSpend');
-  const spendCard=spendEl?.closest('.kpi');
-  const spendLabel=spendCard?.querySelector('.lbl');
-  if(selectedTag==='bmw'){
-    const messagingUsd=BMW_MESSAGING_COST_SAR/SAR_PER_USD;
-    const totalUsd=spend+messagingUsd;
-    const totalSar=spend*SAR_PER_USD+BMW_MESSAGING_COST_SAR;
-    if(spendLabel) spendLabel.textContent='إجمالي إنفاق حملة BMW';
-    if(spendEl) spendEl.innerHTML=
-      '<div>
-  document.getElementById('kClicks').textContent=f(clicks);
-  document.getElementById('kCpm').textContent=f(campaignCount);
-  document.getElementById('kPlatforms').textContent=f(good.length);
-  document.getElementById('kCpc').textContent='$'+f(cpc,3);
-  document.getElementById('kReach').textContent=f(reach);
-  document.getElementById('kUpdated').textContent=new Date(p.updatedAt||Date.now()).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});
-
-  document.getElementById('gauges').innerHTML=[
-    insightCard('Blended CTR',`${f(ctr,2)}%`,'Clicks / Impressions','#078dcc'),
-    insightCard('Blended CPM',`$${f(cpm,2)}`,`Benchmark: $${CPM_BENCHMARK.toFixed(2)}`,'#0f1728'),
-    insightCard('أفضل Cost / Action',bestCpa?`$${f(bestCpa.cpa,2)}`:'—',bestCpa?bestCpa.platform:'No action data','#12b76a'),
-    insightCard('أفضل CTR',bestCtr?`${f(bestCtr.ctr,2)}%`:'—',bestCtr?bestCtr.platform:'No impression data','#f59e0b')
-  ].join('');
-
-  document.getElementById('paidRows').innerHTML=good.map(paidRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="5" class="err">${e}</td></tr>`).join('');
-  const max=Math.max(...good.map(d=>d.spend),1);
-  document.getElementById('bars').innerHTML=[...good].sort((a,b)=>b.spend-a.spend).map(d=>bar(d,max)).join('');
-  document.getElementById('rows').innerHTML=good.map(detailRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="6" class="err">${e}</td></tr>`).join('');
-
-  const messages=[];
-  if(bad.length) messages.push('مصادر غير متاحة أو بدون بيانات مطابقة: '+bad.map(x=>x[0]).join('، ')+'.');
-  if(stale.length) messages.push(stale.join('، ')+' تعرض بيانات محفوظة وليست Live.');
-  if(selectedTag==='all'&&missingCampaignField.length) messages.push('لا يمكن التحقق من أسماء كل الحملات في '+missingCampaignField.join('، ')+' لأن Saved Query لا يحتوي Campaign name.');
-  if(selectedTag==='all'&&legacy.length) messages.push('هذه المنصات تستخدم Saved Query القديم: '+legacy.join('، ')+'.');
-
-  if(selectedTag==='all'&&campaignCount>0){
-    const names=[...campaignNames];
-    const bmwLike=names.filter(x=>/\bbmw\b|car r|car raffle/.test(x));
-    if(bmwLike.length===names.length) messages.push('تنبيه: أسماء الحملات المكتشفة حاليًا تبدو كلها مرتبطة بـ BMW؛ مصدر Supermetrics نفسه قد يكون ما زال مفلترًا على حملة السيارات.');
-  }
-
-  if(messages.length){notice.style.display='block';notice.textContent=messages.join(' ');}
-}
-
-async function loadAll(){
-  const btn=document.getElementById('refresh');
-  if(btn){btn.disabled=true;btn.textContent='جاري التحديث…';}
-  const notice=document.getElementById('notice');notice.style.display='none';
-  try{
-    const r=await fetch(apiUrl());
-    if(!r.ok) throw Error('HTTP '+r.status);
-    lastPayload=await r.json();
-    renderPayload(lastPayload);
-  }catch(e){
-    notice.style.display='block';
-    notice.textContent='تعذر الاتصال ببيانات Supermetrics: '+e.message;
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='تحديث الآن';}
-  }
-}
-
-installFilters();
-loadAll();
-setInterval(loadAll,1800000);
-document.getElementById('refresh')?.addEventListener('click',loadAll);
-+f(totalUsd,2)+'</div>'+
-      '<div style="font-size:15px;margin-top:5px;color:#101828">'+f(totalSar,2)+' ر.س</div>'+
-      '<div style="font-family:Tajawal,Arial,sans-serif;font-size:10px;font-weight:500;color:#667085;margin-top:5px;line-height:1.5">يشمل الإعلانات + WhatsApp '+f(BMW_WHATSAPP_COST_SAR,2)+' ر.س + SMS '+f(BMW_SMS_COST_SAR,2)+' ر.س</div>';
-  }else{
-    if(spendLabel) spendLabel.textContent='إجمالي الإنفاق الإعلاني';
-    if(spendEl) spendEl.textContent='
-  document.getElementById('kClicks').textContent=f(clicks);
-  document.getElementById('kCpm').textContent=f(campaignCount);
-  document.getElementById('kPlatforms').textContent=f(good.length);
-  document.getElementById('kCpc').textContent='$'+f(cpc,3);
-  document.getElementById('kReach').textContent=f(reach);
-  document.getElementById('kUpdated').textContent=new Date(p.updatedAt||Date.now()).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});
-
-  document.getElementById('gauges').innerHTML=[
-    insightCard('Blended CTR',`${f(ctr,2)}%`,'Clicks / Impressions','#078dcc'),
-    insightCard('Blended CPM',`$${f(cpm,2)}`,`Benchmark: $${CPM_BENCHMARK.toFixed(2)}`,'#0f1728'),
-    insightCard('أفضل Cost / Action',bestCpa?`$${f(bestCpa.cpa,2)}`:'—',bestCpa?bestCpa.platform:'No action data','#12b76a'),
-    insightCard('أفضل CTR',bestCtr?`${f(bestCtr.ctr,2)}%`:'—',bestCtr?bestCtr.platform:'No impression data','#f59e0b')
-  ].join('');
-
-  document.getElementById('paidRows').innerHTML=good.map(paidRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="5" class="err">${e}</td></tr>`).join('');
-  const max=Math.max(...good.map(d=>d.spend),1);
-  document.getElementById('bars').innerHTML=[...good].sort((a,b)=>b.spend-a.spend).map(d=>bar(d,max)).join('');
-  document.getElementById('rows').innerHTML=good.map(detailRow).join('')+bad.map(([name,e])=>`<tr><td><b>${name}</b></td><td colspan="6" class="err">${e}</td></tr>`).join('');
-
-  const messages=[];
-  if(bad.length) messages.push('مصادر غير متاحة أو بدون بيانات مطابقة: '+bad.map(x=>x[0]).join('، ')+'.');
-  if(stale.length) messages.push(stale.join('، ')+' تعرض بيانات محفوظة وليست Live.');
-  if(selectedTag==='all'&&missingCampaignField.length) messages.push('لا يمكن التحقق من أسماء كل الحملات في '+missingCampaignField.join('، ')+' لأن Saved Query لا يحتوي Campaign name.');
-  if(selectedTag==='all'&&legacy.length) messages.push('هذه المنصات تستخدم Saved Query القديم: '+legacy.join('، ')+'.');
-
-  if(selectedTag==='all'&&campaignCount>0){
-    const names=[...campaignNames];
-    const bmwLike=names.filter(x=>/\bbmw\b|car r|car raffle/.test(x));
-    if(bmwLike.length===names.length) messages.push('تنبيه: أسماء الحملات المكتشفة حاليًا تبدو كلها مرتبطة بـ BMW؛ مصدر Supermetrics نفسه قد يكون ما زال مفلترًا على حملة السيارات.');
-  }
-
-  if(messages.length){notice.style.display='block';notice.textContent=messages.join(' ');}
-}
-
-async function loadAll(){
-  const btn=document.getElementById('refresh');
-  if(btn){btn.disabled=true;btn.textContent='جاري التحديث…';}
-  const notice=document.getElementById('notice');notice.style.display='none';
-  try{
-    const r=await fetch(apiUrl());
-    if(!r.ok) throw Error('HTTP '+r.status);
-    lastPayload=await r.json();
-    renderPayload(lastPayload);
-  }catch(e){
-    notice.style.display='block';
-    notice.textContent='تعذر الاتصال ببيانات Supermetrics: '+e.message;
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='تحديث الآن';}
-  }
-}
-
-installFilters();
-loadAll();
-setInterval(loadAll,1800000);
-document.getElementById('refresh')?.addEventListener('click',loadAll);
-+f(spend,2);
-  }
+  document.getElementById('kSpend').textContent='$'+f(spend,2);
   document.getElementById('kImp').textContent=f(imp);
   document.getElementById('kClicks').textContent=f(clicks);
   document.getElementById('kCpm').textContent=f(campaignCount);
