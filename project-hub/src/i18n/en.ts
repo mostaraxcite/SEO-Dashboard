@@ -393,6 +393,7 @@ export const en = {
     limitReached: "This workspace reached its AI limit for the month.",
     rateLimited: "Too many AI requests. Try again in a few minutes.",
     stale: "This item changed after the suggestions were made. Refresh suggestions before creating tasks.",
+    cached: "Cached",
     mockBadge: "Mock provider",
     insufficient: "Not enough information to be confident.",
     reason: "Why",

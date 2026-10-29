@@ -30,7 +30,7 @@ export function AiCard({ title, provider, cached, children, actions, onDismiss }
         <span className="text-sm font-medium">{title}</span>
         <span className="ms-auto flex items-center gap-2 text-xs text-muted">
           {provider === "mock" ? <span className="rounded border border-dashed border-line-strong px-1.5">{t("ai.mockBadge")}</span> : null}
-          {cached ? <span>cache</span> : null}
+          {cached ? <span>{t("ai.cached")}</span> : null}
         </span>
       </header>
       <div className="px-3.5 py-3">{children}</div>
