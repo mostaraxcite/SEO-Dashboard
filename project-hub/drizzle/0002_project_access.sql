@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "access" text DEFAULT 'workspace' NOT NULL;
