@@ -8,7 +8,7 @@ import { signedFileUrl } from "@/server/services/files";
 import { aiEnabledFor } from "@/server/services/settings";
 import { AppError } from "@/server/errors";
 import { formatDay, formatDateTime } from "@/i18n";
-import { Panel, PanelHeader, Meta } from "@/components/ui/misc";
+import { Panel, PanelHeader, Meta, Ref } from "@/components/ui/misc";
 import { Pill, publicStatusMeta } from "@/components/ui/status";
 import { StatusSteps } from "@/components/portal/status-steps";
 import { ApprovalPanel } from "@/components/portal/approval-panel";
@@ -38,7 +38,7 @@ export default async function PortalRequest({ params }: { params: Promise<{ slug
       </Link>
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="tnum text-sm text-muted">{r.publicRef}</span>
+          <Ref strong className="text-[0.8125rem]">{r.publicRef}</Ref>
           <Pill tone={meta.tone} icon={meta.icon}>
             {t(`request.public.${r.publicStatus}`)}
           </Pill>

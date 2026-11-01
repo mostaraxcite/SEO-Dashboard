@@ -9,13 +9,14 @@ import { PageHeader, Panel, PanelHeader, EmptyState } from "@/components/ui/misc
 import { TaskList } from "@/components/work/task-list";
 import { QuickAddTask } from "@/components/work/quick-add";
 import { DueLabel } from "@/components/work/due";
+import { formatDay } from "@/i18n";
 
 export const metadata = { title: "My work" };
 
 export default async function MyWorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const actor = await requireStaff(slug);
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
   const [w, people] = await Promise.all([myWork(actor), listStaff(actor)]);
   const firstName = actor.user.name.split(" ")[0];
   const showTriage = actor.tenant.mode === "requests" && isManager(actor);
@@ -27,47 +28,45 @@ export default async function MyWorkPage({ params }: { params: Promise<{ slug: s
   ].filter(Boolean) as { label: string; value: number; href: string; tone: string }[];
   const nothing = !w.attention.length && !w.dueSoon.length && !w.later.length;
 
+  const today = formatDay(w.today, locale, { weekday: "long", day: "numeric", month: "long" });
+  const groups = [
+    { id: "attention", label: t("home.needsAttention"), items: w.attention },
+    { id: "due-soon", label: t("home.dueSoon"), items: w.dueSoon },
+    { id: "later", label: t("home.upcoming"), items: w.later },
+  ].filter((g) => g.items.length);
+
   return (
     <>
-      <PageHeader title={t("home.title")} description={t("home.greeting", { name: firstName })} />
-      <nav aria-label={t("home.title")} className="mb-5 flex overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
+      <PageHeader eyebrow={today} title={t("home.greeting", { name: firstName })} />
+      {/* Counters are filters/anchors into the list below — not dashboard cards. */}
+      <nav aria-label={t("home.title")} className="-mt-2 mb-5 flex flex-wrap gap-x-5 gap-y-2 text-sm">
         {counters.map((c) => (
-          <Link key={c.label} href={c.href} className="flex min-w-0 flex-1 flex-col gap-0.5 border-line px-3 py-3 hover:bg-hover sm:px-4 [&+&]:border-s">
-            <span className="truncate text-xs text-muted sm:text-sm">{c.label}</span>
-            <span className={`tnum text-lg font-semibold ${c.tone || "text-fg"}`}>{c.value}</span>
+          <Link key={c.label} href={c.href} className="group inline-flex items-baseline gap-1.5 text-fg-2 hover:text-fg">
+            <span className={`ref text-[0.8125rem] font-medium ${c.tone || "text-fg"}`}>{c.value}</span>
+            <span className="group-hover:underline underline-offset-4">{c.label}</span>
           </Link>
         ))}
       </nav>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="min-w-0 space-y-5">
-          {nothing ? (
-            <Panel>
-              <QuickAddTask slug={slug} people={people} defaultAssigneeId={actor.user.id} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+          {/* One sheet, grouped by what needs you first. */}
+          <Panel>
+            <QuickAddTask slug={slug} people={people} defaultAssigneeId={actor.user.id} />
+            {nothing ? (
               <EmptyState icon={<CircleCheckBig />} title={t("home.nothingAssigned")} body={t("home.nothingAssignedBody")} className="border-t border-line" />
-            </Panel>
-          ) : null}
-          {w.attention.length ? (
-            <Panel id="attention">
-              <PanelHeader title={t("home.needsAttention")} />
-              <TaskList slug={slug} tasks={w.attention} today={w.today} />
-            </Panel>
-          ) : null}
-          {w.dueSoon.length ? (
-            <Panel id="due-soon">
-              <PanelHeader title={t("home.dueSoon")} />
-              <TaskList slug={slug} tasks={w.dueSoon} today={w.today} />
-            </Panel>
-          ) : null}
-          {!nothing ? (
-            <Panel id="later">
-              <PanelHeader title={t("home.upcoming")} />
-              <QuickAddTask slug={slug} people={people} defaultAssigneeId={actor.user.id} />
-              <div className="border-t border-line">
-                <TaskList slug={slug} tasks={w.later} today={w.today} empty={<p className="px-4 py-3 text-sm text-muted">{t("home.allClear")}</p>} />
-              </div>
-            </Panel>
-          ) : null}
+            ) : (
+              groups.map((g) => (
+                <section key={g.id} id={g.id} aria-labelledby={`${g.id}-h`} className="border-t border-line">
+                  <h2 id={`${g.id}-h`} className="flex items-center justify-between bg-sunken px-4 py-1.5">
+                    <span className="label">{g.label}</span>
+                    <span className="ref text-muted">{g.items.length}</span>
+                  </h2>
+                  <TaskList slug={slug} tasks={g.items} today={w.today} />
+                </section>
+              ))
+            )}
+          </Panel>
         </div>
 
         <aside className="min-w-0 space-y-5">

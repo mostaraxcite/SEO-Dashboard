@@ -14,26 +14,28 @@ export function UserMenu({
   theme,
   accountHref,
   compact,
+  onSpine,
 }: {
   name: string;
   email: string;
   theme: "system" | "light" | "dark";
   accountHref: string;
   compact?: boolean;
+  onSpine?: boolean;
 }) {
   const { t, locale } = useI18n();
   const [, start] = useTransition();
   return (
     <Menu>
       <MenuTrigger
-        className="flex min-w-0 items-center gap-2 rounded-md p-1 text-start hover:bg-hover data-[state=open]:bg-hover"
+        className={`flex min-w-0 items-center gap-2 rounded-md p-1 text-start ${onSpine ? "hover:bg-spine-hover data-[state=open]:bg-spine-active" : "hover:bg-hover data-[state=open]:bg-hover"}`}
         aria-label={t("common.account")}
       >
         <Avatar name={name} size={28} />
         {compact ? null : (
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-fg">{name}</span>
-            <span className="block truncate text-xs text-muted">{email}</span>
+            <span className={`block truncate text-sm font-medium ${onSpine ? "text-on-spine" : "text-fg"}`}>{name}</span>
+            <span className={`block truncate text-xs ${onSpine ? "text-spine-muted" : "text-muted"}`}>{email}</span>
           </span>
         )}
       </MenuTrigger>

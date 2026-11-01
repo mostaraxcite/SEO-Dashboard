@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 import { Ban, Check, GitBranch, MessageSquare } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
-import { Avatar } from "@/components/ui/misc";
+import { Avatar, Ref } from "@/components/ui/misc";
 import { Pill, taskStatusMeta } from "@/components/ui/status";
 import { useToast } from "@/components/ui/toast";
 import { updateTaskAction } from "@/app/w/[slug]/actions";
@@ -67,7 +67,7 @@ function TaskRow({ slug, task, today, showContext, dense }: { slug: string; task
     });
   const meta = taskStatusMeta[status];
   return (
-    <li className={cn("group flex items-center gap-3 px-4 transition-colors hover:bg-hover/60", dense ? "py-2" : "py-2.5")}>
+    <li className={cn("group flex items-center gap-3 px-4 transition-colors hover:bg-hover", dense ? "py-1.5" : "py-2.5")}>
       <button
         type="button"
         onClick={toggle}
@@ -90,7 +90,7 @@ function TaskRow({ slug, task, today, showContext, dense }: { slug: string; task
             {task.clientName ? <span className="font-medium text-fg-2">{task.clientName}</span> : null}
             {task.clientName && (task.projectName || task.requestRef) ? <span aria-hidden="true">·</span> : null}
             {task.projectName ? <span className="truncate">{task.projectName}</span> : null}
-            {task.requestRef ? <span className="tnum">{task.requestRef}</span> : null}
+            {task.requestRef ? <Ref>{task.requestRef}</Ref> : null}
             {task.teamLabel ? <span className="truncate">· {task.teamLabel}</span> : null}
           </div>
         ) : null}

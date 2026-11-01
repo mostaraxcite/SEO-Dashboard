@@ -3,12 +3,12 @@ import { forwardRef, useId } from "react";
 import { cn } from "@/lib/cn";
 
 const control =
-  "w-full rounded-md border border-line-strong bg-surface px-3 text-fg placeholder:text-muted transition-colors " +
+  "tap w-full rounded-md border border-line-strong bg-surface px-3 text-fg placeholder:text-muted transition-colors " +
   "hover:border-[color:var(--text-muted)] focus-visible:outline-none focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-[color:var(--focus)]/25 " +
   "disabled:opacity-60 aria-[invalid=true]:border-danger";
 
-export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...p }, ref) {
-  return <input ref={ref} className={cn(control, "h-9", className)} {...p} />;
+export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { quiet?: boolean }>(function Input({ className, quiet, ...p }, ref) {
+  return <input ref={ref} className={cn(control, "h-9", quiet && "border-transparent bg-transparent hover:border-line-strong hover:bg-surface", className)} {...p} />;
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
@@ -18,12 +18,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
   return <textarea ref={ref} rows={rows} className={cn(control, "py-2 leading-relaxed resize-y min-h-[2.25rem]", className)} {...p} />;
 });
 
-export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className, children, ...p }, ref) {
+export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement> & { quiet?: boolean }>(function Select({ className, children, quiet, ...p }, ref) {
   return (
     <select
       ref={ref}
       className={cn(
         control,
+        // Quiet: reads as text until hovered/focused (property lists).
+        quiet && "border-transparent bg-transparent hover:border-line-strong hover:bg-surface",
         "h-9 appearance-none bg-no-repeat pe-8",
         "bg-[length:14px] [background-position:right_0.6rem_center] rtl:[background-position:left_0.6rem_center]",
         className,

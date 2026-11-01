@@ -10,17 +10,17 @@ import { markNotificationsRead } from "@/app/notification-actions";
 
 export type BellItem = { id: string; text: string; href: string; createdAt: string; read: boolean };
 
-export function NotificationBell({ slug, items, unread, allHref }: { slug: string; items: BellItem[]; unread: number; allHref: string }) {
+export function NotificationBell({ slug, items, unread, allHref, onSpine }: { slug: string; items: BellItem[]; unread: number; allHref: string; onSpine?: boolean }) {
   const { t, locale } = useI18n();
   const [pending, start] = useTransition();
   return (
     <Popover>
       <PopoverTrigger
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-fg-2 hover:bg-hover hover:text-fg data-[state=open]:bg-hover"
+        className={`tap relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${onSpine ? "text-spine-muted hover:bg-spine-hover hover:text-on-spine data-[state=open]:bg-spine-active" : "text-fg-2 hover:bg-hover hover:text-fg data-[state=open]:bg-hover"}`}
         aria-label={`${t("nav.notifications")}${unread ? ` (${unread})` : ""}`}
       >
         <Bell className="h-[18px] w-[18px] stroke-[1.75]" />
-        {unread ? <span className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-accent ring-2 ring-[color:var(--canvas)]" /> : null}
+        {unread ? <span className={`absolute top-1.5 end-1.5 h-2 w-2 rounded-full ${onSpine ? "bg-spine-mark ring-2 ring-[color:var(--spine)]" : "bg-accent ring-2 ring-[color:var(--canvas)]"}`} /> : null}
       </PopoverTrigger>
       <PopoverContent className="w-[min(22rem,calc(100vw-1.5rem))]">
         <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">

@@ -13,7 +13,7 @@ export function AiTrigger({ label, onClick, loading, disabled, title }: { label:
       disabled={disabled || loading}
       title={title}
       aria-busy={loading || undefined}
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-fg-2 transition-colors hover:border-line-strong hover:text-fg disabled:opacity-60"
+      className="tap inline-flex h-8 items-center gap-1.5 rounded-md border border-dashed border-line-strong bg-transparent px-2.5 text-sm font-medium text-fg-2 transition-colors hover:border-solid hover:border-accent hover:bg-accent-soft hover:text-fg disabled:opacity-60"
     >
       <Sparkles className={cn("h-3.5 w-3.5 text-accent", loading && "animate-pulse")} aria-hidden="true" />
       {loading ? t("ai.thinking") : label}
@@ -24,7 +24,7 @@ export function AiTrigger({ label, onClick, loading, disabled, title }: { label:
 export function AiCard({ title, provider, cached, children, actions, onDismiss }: { title: string; provider: string; cached?: boolean; children: React.ReactNode; actions?: React.ReactNode; onDismiss?: () => void }) {
   const { t } = useI18n();
   return (
-    <section className="animate-in rounded-lg border border-line bg-surface shadow-sm" aria-label={title}>
+    <section className="animate-in rounded-lg border border-line border-s-2 border-s-accent bg-surface" aria-label={title}>
       <header className="flex items-center gap-2 border-b border-line px-3.5 py-2">
         <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
         <span className="text-sm font-medium">{title}</span>

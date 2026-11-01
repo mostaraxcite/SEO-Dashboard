@@ -8,7 +8,7 @@ import { listRequests } from "@/server/services/requests";
 import { listProjects } from "@/server/services/projects";
 import { isManager } from "@/server/authz";
 import { AppError } from "@/server/errors";
-import { PageHeader, Panel, PanelHeader, Avatar } from "@/components/ui/misc";
+import { PageHeader, Panel, PanelHeader, Avatar, Ref } from "@/components/ui/misc";
 import { Pill, requestStatusMeta, projectStatusMeta } from "@/components/ui/status";
 import { InviteButton } from "@/components/clients/client-forms";
 
@@ -36,7 +36,7 @@ export default async function ClientPage({ params }: { params: Promise<{ slug: s
               {reqs.map((r) => (
                 <li key={r.id}>
                   <Link href={`/w/${slug}/requests/${r.publicRef}`} className="flex items-center gap-2 px-4 py-2.5 hover:bg-hover/60">
-                    <span className="tnum text-xs text-muted">{r.publicRef}</span>
+                    <Ref>{r.publicRef}</Ref>
                     <span className="min-w-0 flex-1 truncate" dir="auto">{r.title}</span>
                     <Pill tone={requestStatusMeta[r.status].tone} icon={requestStatusMeta[r.status].icon}>
                       {t(`request.internal.${r.status}`)}

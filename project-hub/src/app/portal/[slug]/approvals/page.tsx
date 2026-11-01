@@ -4,7 +4,7 @@ import { requireClient } from "@/server/context";
 import { getI18n } from "@/server/i18n";
 import { listPendingApprovals } from "@/server/services/delivery";
 import { formatRelative } from "@/i18n";
-import { PageHeader, Panel, EmptyState } from "@/components/ui/misc";
+import { PageHeader, Panel, EmptyState, Ref } from "@/components/ui/misc";
 
 export const metadata = { title: "Approvals" };
 
@@ -26,7 +26,7 @@ export default async function Approvals({ params }: { params: Promise<{ slug: st
                 <Link href={`/portal/${slug}/requests/${a.ref}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-hover/60">
                   <div className="min-w-0 flex-1">
                     <p className="tnum text-xs text-muted">
-                      {a.ref} · {t("portal.version", { n: a.version })}
+                      <Ref>{a.ref}</Ref> · {t("portal.version", { n: a.version })}
                     </p>
                     <p className="truncate font-medium" dir="auto">{a.title}</p>
                     <p className="truncate text-sm text-fg-2" dir="auto">{a.deliverableTitle}</p>

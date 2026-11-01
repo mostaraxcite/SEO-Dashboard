@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 
 export function Panel({ className, children, as: As = "section", ...p }: React.HTMLAttributes<HTMLElement> & { as?: "section" | "div" | "aside" }) {
   return (
-    <As className={cn("rounded-lg border border-line bg-surface shadow-sm", className)} {...p}>
+    <As className={cn("rounded-lg border border-line bg-surface", className)} {...p}>
       {children}
     </As>
   );
@@ -10,10 +10,10 @@ export function Panel({ className, children, as: As = "section", ...p }: React.H
 
 export function PanelHeader({ title, actions, description, className }: { title: React.ReactNode; actions?: React.ReactNode; description?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex items-start justify-between gap-3 border-b border-line px-4 py-3", className)}>
+    <div className={cn("flex min-h-12 items-center justify-between gap-3 border-b border-line px-4 py-2", className)}>
       <div className="min-w-0">
-        <h2 className="text-md font-semibold text-fg leading-6">{title}</h2>
-        {description ? <p className="text-sm text-muted">{description}</p> : null}
+        <h2 className="text-[0.9375rem] font-semibold leading-6 text-fg">{title}</h2>
+        {description ? <p className="text-xs text-muted">{description}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>
@@ -34,11 +34,11 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pb-5", className)}>
+    <header className={cn("mb-6 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line pb-4", className)}>
       <div className="min-w-0">
-        {eyebrow ? <div className="mb-1 text-sm text-fg-2">{eyebrow}</div> : null}
-        <h1 className="text-xl font-semibold text-fg">{title}</h1>
-        {description ? <p className="mt-1 text-fg-2">{description}</p> : null}
+        {eyebrow ? <div className="label mb-1.5">{eyebrow}</div> : null}
+        <h1 className="text-[1.5rem] font-semibold leading-8 tracking-[-0.01em] text-fg rtl:tracking-normal">{title}</h1>
+        {description ? <p className="mt-0.5 text-sm text-fg-2">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
@@ -127,5 +127,18 @@ export function ProgressBar({ value, label }: { value: number; label: string }) 
       </div>
       <span className="tnum text-xs text-muted w-9 text-end">{v}%</span>
     </div>
+  );
+}
+
+/**
+ * A shared reference (REQ-1042, NS-1003): the one identifier the client and the team both use.
+ * Set in Plex Mono with a clay tick so it reads the same on every screen and in both directions.
+ */
+export function Ref({ children, className, strong }: { children: React.ReactNode; className?: string; strong?: boolean }) {
+  return (
+    <span className={cn("ref inline-flex items-center gap-1 whitespace-nowrap", strong ? "font-medium text-fg" : "text-muted", className)}>
+      <span aria-hidden="true" className="h-2.5 w-[2px] rounded-full bg-accent" />
+      {children}
+    </span>
   );
 }

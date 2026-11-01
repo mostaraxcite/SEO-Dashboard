@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireStaff } from "@/server/context";
 import { getI18n } from "@/server/i18n";
 import { search } from "@/server/services/search";
-import { PageHeader, Panel, PanelHeader } from "@/components/ui/misc";
+import { PageHeader, Panel, PanelHeader, Ref } from "@/components/ui/misc";
 import { Input } from "@/components/ui/form";
 import { Pill, requestStatusMeta, taskStatusMeta, projectStatusMeta } from "@/components/ui/status";
 
@@ -33,7 +33,7 @@ export default async function SearchPage({ params, searchParams }: { params: Pro
               {res.requests.map((r) => (
                 <li key={r.ref}>
                   <Link href={`/w/${slug}/requests/${r.ref}`} className="flex items-center gap-2 px-4 py-2.5 hover:bg-hover/60">
-                    <span className="tnum text-xs text-muted">{r.ref}</span>
+                    <Ref>{r.ref}</Ref>
                     <span className="min-w-0 flex-1 truncate" dir="auto">{r.title}</span>
                     <Pill tone={requestStatusMeta[r.status].tone} icon={requestStatusMeta[r.status].icon}>{t(`request.internal.${r.status}`)}</Pill>
                   </Link>

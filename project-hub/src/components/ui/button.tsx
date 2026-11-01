@@ -6,7 +6,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
 type Size = "sm" | "md" | "icon" | "icon-sm";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand text-on-brand hover:bg-brand-hover shadow-sm",
+  primary: "bg-brand text-on-brand hover:bg-brand-hover",
   secondary: "bg-surface text-fg border border-line-strong hover:bg-hover",
   ghost: "text-fg-2 hover:bg-hover hover:text-fg",
   subtle: "bg-brand-soft text-fg hover:brightness-[0.97]",
@@ -28,7 +28,7 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export const buttonClass = (variant: Variant = "secondary", size: Size = "md", extra?: string) =>
   cn(
-    "inline-flex shrink-0 items-center rounded-md font-medium whitespace-nowrap transition-colors duration-100",
+    "tap inline-flex shrink-0 items-center rounded-md font-medium whitespace-nowrap transition-colors duration-100 active:translate-y-px",
     "disabled:opacity-50 disabled:pointer-events-none select-none",
     variants[variant],
     sizes[size],

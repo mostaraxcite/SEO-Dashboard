@@ -5,6 +5,8 @@
 @import "@fontsource/ibm-plex-sans-arabic/400.css";
 @import "@fontsource/ibm-plex-sans-arabic/500.css";
 @import "@fontsource/ibm-plex-sans-arabic/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -41,6 +43,14 @@
   --info: #2d5873;
   --info-soft: #e3ecf2;
   --neutral-soft: #eceae4;
+  /* The workspace spine: sidebar / portal band, painted in the workspace color (contrast-checked vs white). */
+  --spine: var(--tb, #273a37);
+  --on-spine: #ffffff;
+  --spine-muted: rgb(255 255 255 / 0.72);
+  --spine-hover: rgb(255 255 255 / 0.08);
+  --spine-active: rgb(255 255 255 / 0.14);
+  --spine-line: rgb(255 255 255 / 0.12);
+  --spine-mark: var(--canvas);
   --shadow-sm: 0 1px 2px rgb(31 44 42 / 0.06);
   --shadow-md: 0 4px 16px rgb(31 44 42 / 0.10), 0 1px 3px rgb(31 44 42 / 0.06);
   color-scheme: light;
@@ -74,6 +84,13 @@
     --info: #8dbad8;
     --info-soft: #1d2a33;
     --neutral-soft: #262d2b;
+    --spine: #0c100f;
+    --on-spine: #e8ebe7;
+    --spine-muted: rgb(232 235 231 / 0.66);
+    --spine-hover: rgb(255 255 255 / 0.05);
+    --spine-active: rgb(255 255 255 / 0.09);
+    --spine-line: rgb(255 255 255 / 0.08);
+    --spine-mark: var(--brand);
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-md: 0 6px 20px rgb(0 0 0 / 0.45);
     color-scheme: dark;
@@ -107,6 +124,13 @@
   --info: #8dbad8;
   --info-soft: #1d2a33;
   --neutral-soft: #262d2b;
+  --spine: #0c100f;
+  --on-spine: #e8ebe7;
+  --spine-muted: rgb(232 235 231 / 0.66);
+  --spine-hover: rgb(255 255 255 / 0.05);
+  --spine-active: rgb(255 255 255 / 0.09);
+  --spine-line: rgb(255 255 255 / 0.08);
+  --spine-mark: var(--brand);
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 6px 20px rgb(0 0 0 / 0.45);
   color-scheme: dark;
@@ -130,6 +154,13 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-focus: var(--focus);
+  --color-spine: var(--spine);
+  --color-on-spine: var(--on-spine);
+  --color-spine-muted: var(--spine-muted);
+  --color-spine-hover: var(--spine-hover);
+  --color-spine-active: var(--spine-active);
+  --color-spine-line: var(--spine-line);
+  --color-spine-mark: var(--spine-mark);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -146,6 +177,7 @@
   --radius-lg: 10px;
   --font-sans: "IBM Plex Sans", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   --font-arabic: "IBM Plex Sans Arabic", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --text-xs: 0.75rem;
   --text-xs--line-height: 1.1rem;
   --text-sm: 0.8125rem;
@@ -225,5 +257,28 @@
 .animate-in { animation: ph-fade-in 140ms ease-out; }
 .skeleton { background: var(--surface-sunken); animation: ph-pulse 1.4s ease-in-out infinite; border-radius: 6px; }
 
-/* Tabular numerals for dates/refs in tables */
+/* Tabular numerals for counts/dates. */
 .tnum { font-variant-numeric: tabular-nums; }
+
+/* Shared references (REQ-1042) and dates are set in Plex Mono: the one vocabulary client and team share. */
+.ref {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  font-feature-settings: "zero" 1;
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+/* Section label: small, sentence case, quiet. */
+.label {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Touch targets: interactive controls grow to 40px on coarse pointers. */
+@media (pointer: coarse) {
+  .tap { min-height: 40px; }
+}

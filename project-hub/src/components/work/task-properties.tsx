@@ -35,7 +35,7 @@ export function TaskProperties({
           <label htmlFor="tp-status">{t("common.status")}</label>
         </dt>
         <dd>
-          <Select id="tp-status" defaultValue={task.status} onChange={(e) => save({ status: e.target.value })} className="h-8 text-sm">
+          <Select id="tp-status" defaultValue={task.status} onChange={(e) => save({ status: e.target.value })} className="h-8 text-sm" quiet>
             {(["todo", "in_progress", "review", "done"] as const).map((s) => (
               <option key={s} value={s}>
                 {t(`task.status.${s}`)}
@@ -49,7 +49,7 @@ export function TaskProperties({
           <label htmlFor="tp-assignee">{t("task.assignee")}</label>
         </dt>
         <dd>
-          <Select id="tp-assignee" defaultValue={task.assigneeId ?? ""} onChange={(e) => save({ assigneeId: e.target.value })} className="h-8 text-sm">
+          <Select id="tp-assignee" defaultValue={task.assigneeId ?? ""} onChange={(e) => save({ assigneeId: e.target.value })} className="h-8 text-sm" quiet>
             <option value="">{t("common.unassigned")}</option>
             {people.map((p) => (
               <option key={p.id} value={p.id}>
@@ -64,7 +64,7 @@ export function TaskProperties({
           <label htmlFor="tp-due">{t("task.dueDate")}</label>
         </dt>
         <dd>
-          <Input id="tp-due" type="date" defaultValue={task.dueDate ?? ""} onChange={(e) => save({ dueDate: e.target.value })} className="h-8 text-sm" />
+          <Input id="tp-due" type="date" defaultValue={task.dueDate ?? ""} onChange={(e) => save({ dueDate: e.target.value })} className="h-8 text-sm" quiet />
         </dd>
       </div>
       {!task.parentTaskId && !task.requestId ? (
@@ -73,7 +73,7 @@ export function TaskProperties({
             <label htmlFor="tp-project">{t("common.project")}</label>
           </dt>
           <dd>
-            <Select id="tp-project" defaultValue={task.projectId ?? ""} onChange={(e) => save({ projectId: e.target.value })} className="h-8 text-sm">
+            <Select id="tp-project" defaultValue={task.projectId ?? ""} onChange={(e) => save({ projectId: e.target.value })} className="h-8 text-sm" quiet>
               <option value="">{t("task.noProject")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>

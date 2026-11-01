@@ -10,10 +10,10 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-md text-fg-2 hover:bg-hover lg:hidden" aria-label={t("common.menu")}>
+      <DialogTrigger className="tap inline-flex h-10 w-10 items-center justify-center rounded-md text-spine-muted hover:bg-spine-hover hover:text-on-spine lg:hidden" aria-label={t("common.menu")}>
         <MenuIcon className="h-5 w-5" />
       </DialogTrigger>
-      <DialogContent title={t("common.menu")} side="start" className="bg-sunken">
+      <DialogContent title={t("common.menu")} side="start" className="border-0 bg-spine">
         <div onClickCapture={(e) => (e.target as HTMLElement).closest("a") && setOpen(false)} className="h-full">
           {children}
         </div>

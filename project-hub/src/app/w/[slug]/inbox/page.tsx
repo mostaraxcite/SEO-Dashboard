@@ -6,7 +6,7 @@ import { listRequests } from "@/server/services/requests";
 import { clientOptions } from "@/server/services/workspace";
 import { assertRequestsMode } from "@/server/authz";
 import { formatDay, formatRelative } from "@/i18n";
-import { PageHeader, Panel, EmptyState, Avatar } from "@/components/ui/misc";
+import { PageHeader, Panel, EmptyState, Avatar, Ref } from "@/components/ui/misc";
 import { Pill, requestStatusMeta } from "@/components/ui/status";
 import { TabLink } from "@/components/shell/nav-link";
 import { SlaPill } from "@/components/requests/sla";
@@ -75,7 +75,7 @@ export default async function InboxPage({ params, searchParams }: { params: Prom
                   <tr key={r.id} className="relative block hover:bg-hover/60 md:table-row">
                     <td className="block px-4 pt-3 md:table-cell md:py-3">
                       <div className="flex items-center gap-2">
-                        <span className="tnum text-xs text-muted">{r.publicRef}</span>
+                        <Ref>{r.publicRef}</Ref>
                         <Pill tone={meta.tone} icon={meta.icon}>
                           {t(`request.internal.${r.status}`)}
                         </Pill>

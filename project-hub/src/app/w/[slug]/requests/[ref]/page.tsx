@@ -12,7 +12,7 @@ import { aiEnabledFor } from "@/server/services/settings";
 import { isManager } from "@/server/authz";
 import { AppError } from "@/server/errors";
 import { formatDay, formatDateTime, todayIn } from "@/i18n";
-import { Panel, PanelHeader, Meta } from "@/components/ui/misc";
+import { Panel, PanelHeader, Meta, Ref } from "@/components/ui/misc";
 import { Pill, requestStatusMeta } from "@/components/ui/status";
 import { TabLink } from "@/components/shell/nav-link";
 import { TaskList } from "@/components/work/task-list";
@@ -62,7 +62,7 @@ export default async function StaffRequestPage({ params, searchParams }: { param
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="tnum text-sm text-muted">{r.publicRef}</span>
+            <Ref strong className="text-[0.8125rem]">{r.publicRef}</Ref>
             <Pill tone={meta.tone} icon={meta.icon}>
               {t(`request.internal.${r.status}`)}
             </Pill>

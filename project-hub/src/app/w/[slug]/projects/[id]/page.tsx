@@ -10,7 +10,7 @@ import { signedFileUrl } from "@/server/services/files";
 import { isManager } from "@/server/authz";
 import { AppError } from "@/server/errors";
 import { formatDay, todayIn } from "@/i18n";
-import { Panel, PanelHeader, Meta, ProgressBar, Avatar } from "@/components/ui/misc";
+import { Panel, PanelHeader, Meta, ProgressBar, Avatar, Ref } from "@/components/ui/misc";
 import { Pill, requestStatusMeta } from "@/components/ui/status";
 import { TabLink } from "@/components/shell/nav-link";
 import { TaskList } from "@/components/work/task-list";
@@ -80,7 +80,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                   {extras.requests.map((r) => (
                     <li key={r.id}>
                       <Link href={`/w/${slug}/requests/${r.publicRef}`} className="flex items-center gap-2 px-4 py-2.5 hover:bg-hover/60">
-                        <span className="tnum text-xs text-muted">{r.publicRef}</span>
+                        <Ref>{r.publicRef}</Ref>
                         <span className="min-w-0 flex-1 truncate" dir="auto">{r.title}</span>
                         <Pill tone={requestStatusMeta[r.status].tone} icon={requestStatusMeta[r.status].icon}>
                           {t(`request.internal.${r.status}`)}

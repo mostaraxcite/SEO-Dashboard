@@ -14,7 +14,7 @@ export function DueLabel({ date, today, done, className }: { date: string | null
   return (
     <span
       className={cn(
-        "tnum inline-flex items-center gap-1 whitespace-nowrap text-xs",
+        "tnum inline-flex items-center gap-1 whitespace-nowrap text-xs ltr:font-mono ltr:text-[0.6875rem]",
         overdue ? "font-medium text-danger" : diff <= 1 && !done ? "text-warning" : "text-muted",
         className,
       )}

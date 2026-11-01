@@ -3,21 +3,33 @@ import { cn } from "@/lib/cn";
 
 export type Tone = "neutral" | "info" | "success" | "warning" | "danger" | "brand" | "accent";
 
+/*
+ * Calm states are outlined labels with a colored icon; only states that need action
+ * (warning, danger) get a filled background. Status is always icon + text, never color alone.
+ */
 const tones: Record<Tone, string> = {
-  neutral: "bg-neutral-soft text-fg-2",
-  info: "bg-info-soft text-info",
-  success: "bg-success-soft text-success",
+  neutral: "border border-line bg-surface text-fg-2",
+  info: "border border-line bg-surface text-fg-2",
+  success: "border border-line bg-surface text-fg-2",
+  brand: "border border-line bg-surface text-fg",
+  accent: "border border-line bg-surface text-fg-2",
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",
-  brand: "bg-brand-soft text-fg",
-  accent: "bg-accent-soft text-accent",
+};
+const iconTones: Record<Tone, string> = {
+  neutral: "text-muted",
+  info: "text-info",
+  success: "text-success",
+  brand: "text-fg",
+  accent: "text-accent",
+  warning: "",
+  danger: "",
 };
 
-/** Status is always icon + text, never color alone. */
 export function Pill({ tone = "neutral", icon, children, className }: { tone?: Tone; icon?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex h-6 max-w-full items-center gap-1 rounded-md px-2 text-xs font-medium whitespace-nowrap", tones[tone], className)}>
-      {icon ? <span className="shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5" aria-hidden="true">{icon}</span> : null}
+    <span className={cn("inline-flex h-[22px] max-w-full items-center gap-1 rounded-[5px] px-1.5 text-xs font-medium whitespace-nowrap", tones[tone], className)}>
+      {icon ? <span className={cn("shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5", iconTones[tone])} aria-hidden="true">{icon}</span> : null}
       <span className="truncate">{children}</span>
     </span>
   );

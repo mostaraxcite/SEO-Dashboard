@@ -5,6 +5,7 @@ import { formatDay, formatRelative } from "@/i18n";
 import { Pill, publicStatusMeta } from "@/components/ui/status";
 import type { RequestRow } from "@/server/services/requests";
 import { publicStatus } from "@/server/services/requests";
+import { Ref } from "@/components/ui/misc";
 
 /** Requester-facing row: reference, title, plain status, expected date, last change. */
 export function RequestCard({ r, href, t, locale }: { r: RequestRow; href: string; t: T; locale: Locale }) {
@@ -16,7 +17,7 @@ export function RequestCard({ r, href, t, locale }: { r: RequestRow; href: strin
     <Link href={href} className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-hover/60">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="tnum text-xs text-muted">{r.publicRef}</span>
+          <Ref>{r.publicRef}</Ref>
           <Pill tone={meta.tone} icon={meta.icon}>
             {t(`request.public.${ps}`)}
           </Pill>

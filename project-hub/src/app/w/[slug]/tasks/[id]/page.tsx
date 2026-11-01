@@ -9,7 +9,7 @@ import { projectOptions } from "@/server/services/projects";
 import { signedFileUrl } from "@/server/services/files";
 import { AppError } from "@/server/errors";
 import { todayIn } from "@/i18n";
-import { Panel, PanelHeader } from "@/components/ui/misc";
+import { Panel, PanelHeader, Ref } from "@/components/ui/misc";
 import { TaskList } from "@/components/work/task-list";
 import { QuickAddTask } from "@/components/work/quick-add";
 import { Thread } from "@/components/work/thread";
@@ -57,7 +57,7 @@ export default async function TaskPage({ params }: { params: Promise<{ slug: str
               </Link>
             </>
           ) : null}
-          {task.clientName ? <span className="ms-2 rounded bg-neutral-soft px-1.5 py-0.5 text-xs text-fg-2">{task.clientName}</span> : null}
+          {task.clientName ? <span className="ms-2 font-medium text-fg-2">· {task.clientName}</span> : null}
         </nav>
 
         <header>
@@ -89,7 +89,7 @@ export default async function TaskPage({ params }: { params: Promise<{ slug: str
         ) : null}
 
         <Panel>
-          <PanelHeader title={t("task.comments")} description={t("task.internalOnly")} />
+          <PanelHeader title={t("task.comments")} />
           <Thread
             items={task.comments.map((c) => ({ id: c.id, body: c.body, authorName: c.authorName, createdAt: c.createdAt.toISOString() }))}
             mode="internal"
@@ -115,7 +115,7 @@ export default async function TaskPage({ params }: { params: Promise<{ slug: str
             <div className="mt-3 border-t border-line pt-3">
               <p className="text-sm text-muted">{t("task.linkedRequest")}</p>
               <Link href={`/w/${slug}/requests/${task.requestRef}`} className="mt-0.5 block font-medium text-fg hover:underline" dir="auto">
-                <span className="tnum text-muted">{task.requestRef}</span> · {task.requestTitle}
+                <Ref>{task.requestRef}</Ref> {task.requestTitle}
               </Link>
               <p className="mt-2 flex gap-1.5 text-xs text-muted">
                 <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />

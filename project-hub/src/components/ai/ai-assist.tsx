@@ -173,7 +173,7 @@ function SummaryBody({ s }: { s: Summary }) {
       {rows.map(([label, v]) =>
         Array.isArray(v) && v.length ? (
           <div key={label}>
-            <h4 className="text-xs font-medium uppercase tracking-wide text-muted rtl:normal-case rtl:tracking-normal">{label}</h4>
+            <h4 className="label">{label}</h4>
             <ul className="mt-0.5 list-disc space-y-0.5 ps-5 text-fg-2 marker:text-line-strong">
               {v.map((x, i) => (
                 <li key={i}>{x}</li>
